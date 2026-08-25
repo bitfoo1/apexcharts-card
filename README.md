@@ -163,12 +163,16 @@ Uninstall the upstream card first, or the two will fight over the
 
 ### HACS (recommended)
 
-This card is available in [HACS](https://hacs.xyz/) (Home Assistant Community Store).
+Upstream is in [HACS](https://hacs.xyz/) directly. **This fork** must be added as a
+custom repository: HACS → three-dot menu → *Custom repositories* → URL
+`https://github.com/bitfoo1/apexcharts-card`, type *Dashboard*. Then download it
+like any other card. Remove the upstream `apexcharts-card` first — both register
+the same `apexcharts-card` custom element and only one of them wins.
 <small>_HACS is a third-party community store and is not included in Home Assistant out of the box._</small>
 
 ### Manual install
 
-1. Download and copy `apexcharts-card.js` from the [latest release](https://github.com/RomRider/apexcharts-card/releases/latest) into your `config/www` directory.
+1. Download and copy `apexcharts-card.js` from the [latest release](https://github.com/bitfoo1/apexcharts-card/releases/latest) into your `config/www` directory.
 
 2. Add the resource reference as described below.
 
@@ -179,7 +183,7 @@ This card is available in [HACS](https://hacs.xyz/) (Home Assistant Community St
 2. Grab `apexcharts-card.js`:
 
 ```
-$ wget https://github.com/RomRider/apexcharts-card/releases/download/v2.2.3/apexcharts-card.js
+$ wget https://github.com/bitfoo1/apexcharts-card/releases/download/v2.2.3/apexcharts-card.js
 ```
 
 3. Add the resource reference as described below.

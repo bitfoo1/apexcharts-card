@@ -18,7 +18,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/RomRider/apexcharts-card.git"
+    "url": "git+https://github.com/bitfoo1/apexcharts-card.git"
   },
   "keywords": [
     "lovelace",
@@ -27,12 +27,12 @@
     "charts",
     "home-assistant"
   ],
-  "author": "Jérôme Wiedemann",
+  "author": "J\u00e9r\u00f4me Wiedemann",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/RomRider/apexcharts-card/issues"
+    "url": "https://github.com/bitfoo1/apexcharts-card/issues"
   },
-  "homepage": "https://github.com/RomRider/apexcharts-card#readme",
+  "homepage": "https://github.com/bitfoo1/apexcharts-card#readme",
   "dependencies": {
     "@ctrl/tinycolor": "^4.2.0",
     "@material/mwc-ripple": "^0.27.0",
