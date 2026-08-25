@@ -1,0 +1,65 @@
+# Dev environment for this fork. `mise install` provisions the toolchain,
+# `mise run verify` is the gate before every commit.
+#
+# Node is pinned exactly: the build runs rollup-plugin-typescript2, whose
+# cache is version-sensitive, and a floating Node made builds differ between
+# machines and CI.
+
+[tools]
+node = "26.7.0"
+
+[env]
+# Keep npm from writing progress noise into task output.
+npm_config_fund = "false"
+npm_config_audit = "false"
+
+[tasks.install]
+description = "Install npm dependencies from the lockfile"
+run = "npm ci"
+
+[tasks.typecheck]
+description = "Type-check src and tests without emitting"
+run = "npm run typecheck"
+
+[tasks.lint]
+description = "ESLint over src"
+run = "npm run lint"
+
+[tasks.test]
+description = "Run the unit tests once"
+run = "npm test"
+
+[tasks.'test:watch']
+description = "Run the unit tests in watch mode"
+run = "npm run test:watch"
+
+[tasks.'test:coverage']
+description = "Run the unit tests with a coverage report"
+run = "npm run test:coverage"
+
+[tasks.build]
+description = "Full build (types-check, typecheck, lint, rollup) into dist/"
+run = "npm run build"
+
+[tasks.watch]
+description = "Rebuild dist/ on change, for a live Home Assistant dev instance"
+run = "npm run watch"
+
+[tasks.verify]
+description = "Everything CI checks: typecheck, lint, tests, bundle"
+depends = ["typecheck", "lint", "test"]
+run = "npm run rollup"
+
+[tasks.clean]
+description = "Remove build output and the type-checker cache"
+run = "rm -rf dist .rpt2_cache coverage"
+
+[tasks.'deploy:local']
+description = "Copy the built card into a local Home Assistant www folder (set HA_WWW)"
+run = '''
+set -euo pipefail
+: "${HA_WWW:?set HA_WWW to your Home Assistant www/ path, e.g. HA_WWW=/config/www}"
+test -f dist/apexcharts-card.js || { echo "dist/apexcharts-card.js missing, run 'mise run build'" >&2; exit 1; }
+cp dist/apexcharts-card.js "$HA_WWW/apexcharts-card.js"
+echo "copied to $HA_WWW/apexcharts-card.js — hard-refresh the browser (Ctrl+Shift+R)"
+'''

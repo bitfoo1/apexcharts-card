@@ -20,6 +20,48 @@ import SparkMD5 from 'spark-md5';
 import { ChartCardSpanExtConfig, StatisticsPeriod } from './types-config';
 import * as pjson from '../package.json';
 
+/**
+ * Home Assistant omits statistic periods it has no data for (sensor down,
+ * restart) instead of reporting them as null. `fill_raw` therefore never saw
+ * those gaps and the chart drew a straight line across the outage. Inserting
+ * the missing periods as null entries hands them to the existing fill and
+ * transform logic. Adopted from upstream PR RomRider#1064.
+ *
+ * The period length is taken from the item that FOLLOWS the gap, because the
+ * following item is the one whose grid the reinserted buckets must line up
+ * with. Exported for unit testing.
+ */
+export function fillStatisticGaps(newHistory: StatisticValue[]): StatisticValue[] {
+  let prevItem: StatisticValue | null = null;
+  const filled: StatisticValue[] = [];
+  newHistory.forEach((item) => {
+    if (prevItem) {
+      const step = Number(item.end) - Number(item.start);
+      let currentStart = Number(prevItem.end);
+      const targetEnd = Number(item.start);
+      while (currentStart < targetEnd && step > 0) {
+        const currentEnd = Math.min(currentStart + step, targetEnd);
+        filled.push({
+          statistic_id: prevItem.statistic_id,
+          start: currentStart.toString(),
+          end: currentEnd.toString(),
+          last_reset: null,
+          max: null,
+          mean: null,
+          min: null,
+          sum: null,
+          state: null,
+          change: null,
+        });
+        currentStart = currentEnd;
+      }
+    }
+    filled.push(item);
+    prevItem = item;
+  });
+  return filled;
+}
+
 export default class GraphEntry {
   private _computedHistory?: EntityCachePoints;
 
@@ -268,40 +310,7 @@ export default class GraphEntry {
         if (newHistory && newHistory.length > 0) {
           updateGraphHistory = true;
 
-          // `fill_raw` only ever saw gaps that HA reported explicitly as
-          // null/unavailable. When the recorder has no row at all for a period
-          // (sensor down, restart), HA simply omits it and the two neighbouring
-          // buckets get connected by a straight line that hides the outage.
-          // Materialising the missing buckets as null lets the existing
-          // fill/transform logic handle them. Upstream PR RomRider#1064.
-          let prevItem: StatisticValue | null = null;
-          const newFilledHistory: StatisticValue[] = [];
-          newHistory.forEach((item) => {
-            if (prevItem) {
-              const step = Number(item.end) - Number(item.start);
-              let currentStart = Number(prevItem.end);
-              const targetEnd = Number(item.start);
-              while (currentStart < targetEnd && step > 0) {
-                const currentEnd = Math.min(currentStart + step, targetEnd);
-                newFilledHistory.push({
-                  statistic_id: prevItem.statistic_id,
-                  start: currentStart.toString(),
-                  end: currentEnd.toString(),
-                  last_reset: null,
-                  max: null,
-                  mean: null,
-                  min: null,
-                  sum: null,
-                  state: null,
-                  change: null,
-                });
-                currentStart = currentEnd;
-              }
-            }
-            newFilledHistory.push(item);
-            prevItem = item;
-          });
-
+          const newFilledHistory = fillStatisticGaps(newHistory);
           let lastNonNull: number | null = null;
           if (history && history.data && history.data.length > 0) {
             lastNonNull = history.data[history.data.length - 1][1];

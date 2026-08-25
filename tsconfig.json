@@ -2,8 +2,8 @@
   "compilerOptions": {
     "target": "es2017",
     "module": "esnext",
-    "moduleResolution": "node",
-    "lib": ["es2019", "dom", "dom.iterable"],
+    "moduleResolution": "bundler",
+    "lib": ["es2022", "dom", "dom.iterable"],
     "plugins": [
       {
         "name": "ts-lit-plugin"
@@ -21,5 +21,5 @@
     "sourceMap": true,
     "allowSyntheticDefaultImports": true
   },
-  "include": ["src/*"]
+  "include": ["src/*", "tests/*"]
 }
