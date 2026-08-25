@@ -1230,9 +1230,21 @@ mise run css:diff tooltip    # only selectors containing "tooltip"
 
 It reports rules the bundled library has that the copy lacks, rules whose
 declarations differ, and rules only the copy has. Not every difference is a bug
-(the Home Assistant theming overrides are intentional), so treat it as a report.
-Skipping this is what produced black tooltip text and duplicated marker rows
-after the ApexCharts 6 upgrade.
+(the Home Assistant theming and the compact row metrics are intentional), so
+treat it as a report. Skipping this is what produced black tooltip text and
+duplicated marker rows after the ApexCharts 6 upgrade.
+
+For anything that depends on *rendered* size, measure instead of reasoning —
+jsdom does no layout, which is how the row metrics ended up wrong twice:
+
+```bash
+mise run tooltip:preview             # current stylesheet
+mise run tooltip:preview v2.3.3      # next to a git ref, for comparison
+```
+
+It renders the real ApexCharts markup with the card's stylesheet in a shadow
+root, prints the measured tooltip and row height, and writes a screenshot.
+Requires Firefox; override the path with `FIREFOX_BIN`.
 
 ### Type checking <!-- omit in toc -->
 

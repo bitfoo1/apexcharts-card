@@ -78,7 +78,9 @@ describe('axis tooltip theming', () => {
  */
 describe('compact tooltip rows', () => {
   function lastRule(selector: string): string {
-    const at = css.lastIndexOf(`${selector} {`);
+    // Anchor on the line start so a selector is not matched as the tail of a
+    // longer one (e.g. '... .apexcharts-tooltip-marker' for the active rule).
+    const at = css.lastIndexOf(`\n  ${selector} {`);
     expect(at, `selector ${selector} not found`).toBeGreaterThan(-1);
     return css.slice(at, css.indexOf('}', at));
   }
@@ -95,7 +97,19 @@ describe('compact tooltip rows', () => {
   });
 
   it('tightens the row padding instead of the library 4px', () => {
-    expect(lastRule('.apexcharts-tooltip-series-group')).toMatch(/padding:\s*2px 12px/);
+    expect(lastRule('.apexcharts-tooltip-series-group')).toMatch(/padding:\s*0 10px/);
+  });
+
+  it('tightens the line box, which is what actually sets the row height', () => {
+    expect(lastRule('.apexcharts-tooltip-text')).toMatch(/line-height:\s*1\.15/);
+  });
+
+  it('keeps the marker small enough not to set the row height itself', () => {
+    // A 12px marker in a 13.8px row would define the row height instead of the
+    // text; 10px keeps the text in charge.
+    const marker = lastRule('.apexcharts-tooltip-marker');
+    expect(marker).toMatch(/width:\s*10px/);
+    expect(marker).toMatch(/height:\s*10px/);
   });
 
   it('removes the goals negative margin that compensated the dropped padding', () => {

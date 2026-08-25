@@ -409,9 +409,9 @@ export const stylesApex: CSSResultGroup = css`
     align-items: center;
     justify-content: center;
     position: relative;
-    width: 12px;
-    height: 12px;
-    margin-right: 6px;
+    width: 10px;
+    height: 10px;
+    margin-right: 5px;
     vertical-align: middle;
     color: inherit;
   }
@@ -711,21 +711,39 @@ export const stylesApex: CSSResultGroup = css`
    * ApexCharts stacks three sub-groups (y, goals, z) inside every series row and
    * pads each of them, on top of the row's own padding. A plain value row uses
    * only the y group, so that padding is dead space: 19px per row in ApexCharts
-   * 6 (4+4 on the row, 6+5 on the y group), up from 11px in 5.x. At the four to
-   * six series a Home Assistant chart typically shows, that reads as though
-   * every entity occupied two rows.
+   * 6, up from 11px in 5.x. At the four to six series a Home Assistant chart
+   * typically shows, that reads as though every entity occupied two rows.
    *
-   * The goals negative margin has to go with it: it exists to pull the goals
-   * line back over the padding that is being removed here, and would otherwise
+   * Measured with scripts/tooltip-preview.mjs (five series plus title, real
+   * ApexCharts 6 markup in a shadow root, headless Firefox):
+   *   stock ApexCharts 6 metrics  32px per row, 195px total
+   *   first pass at compacting    17px per row, 114px total
+   *   these values             13.8px per row,  93px total
+   * Tighter than this starts clipping descenders at the 12px tooltip font.
+   *
+   * The goals negative margin has to go with the padding: it exists to pull the
+   * goals line back over the space being removed here, and would otherwise
    * overlap the value above it.
    */
+  .apexcharts-tooltip {
+    padding: 0;
+  }
+
   .apexcharts-tooltip-series-group {
-    padding: 2px 12px;
+    padding: 0 10px;
   }
 
   .apexcharts-tooltip-series-group.apexcharts-active:last-child,
   .apexcharts-tooltip-series-group:last-child {
-    padding-bottom: 4px;
+    padding-bottom: 3px;
+  }
+
+  .apexcharts-tooltip-series-group:first-of-type {
+    padding-top: 1px;
+  }
+
+  .apexcharts-tooltip-text {
+    line-height: 1.15;
   }
 
   .apexcharts-tooltip-y-group {
@@ -734,7 +752,7 @@ export const stylesApex: CSSResultGroup = css`
 
   .apexcharts-tooltip-text-goals-label,
   .apexcharts-tooltip-text-goals-value {
-    padding: 2px 0 0;
+    padding: 1px 0 0;
   }
 
   .apexcharts-tooltip-text-goals-label:not(:empty),
@@ -743,7 +761,7 @@ export const stylesApex: CSSResultGroup = css`
   }
 
   .apexcharts-tooltip-title {
-    padding: 6px 12px 2px;
+    padding: 4px 10px 2px;
   }
 
   .apexcharts-xcrosshairs,

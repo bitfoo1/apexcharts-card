@@ -15,7 +15,8 @@
     "lint": "eslint src tests rollup.config.js eslint.config.mjs",
     "watch": "npm run build:types-check && rollup -c --watch",
     "postversion": "npm run build",
-    "css:diff": "node scripts/css-diff.mjs"
+    "css:diff": "node scripts/css-diff.mjs",
+    "tooltip:preview": "node scripts/tooltip-preview.mjs"
   },
   "repository": {
     "type": "git",
@@ -28,7 +29,7 @@
     "charts",
     "home-assistant"
   ],
-  "author": "Jérôme Wiedemann",
+  "author": "J\u00e9r\u00f4me Wiedemann",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/bitfoo1/apexcharts-card/issues"

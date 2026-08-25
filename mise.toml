@@ -68,3 +68,8 @@ echo "copied to $HA_WWW/apexcharts-card.js — hard-refresh the browser (Ctrl+Sh
 description = "Report drift between src/styles.ts and the bundled ApexCharts stylesheet"
 usage = 'arg "<selector>" help="Only report selectors containing this substring" default=""'
 run = 'node scripts/css-diff.mjs "$usage_selector"'
+
+[tasks.'tooltip:preview']
+description = "Render and measure the tooltip in headless Firefox (optionally against git refs)"
+usage = 'arg "<refs>" var=true help="git refs to render alongside the working tree" default=""'
+run = 'node scripts/tooltip-preview.mjs $usage_refs'

@@ -71,9 +71,12 @@ type-check. This already caused a wrong conclusion once during this fork. Run
 `mise run typecheck` (it is wired into `build`), and `mise run clean` when
 touching dependencies.
 
-**A green build is not a working card.** There is no rendering test. Anything
-touching ApexCharts options, layout, or the Home Assistant connection must be
-verified in a browser. If you cannot do that, say so explicitly instead of
+**A green build is not a working card.** There is no rendering test, and jsdom
+does no layout. Anything touching ApexCharts options or layout must be verified
+in a browser; for tooltip metrics specifically, `mise run tooltip:preview
+[git-ref...]` renders and measures it in headless Firefox and writes a
+screenshot. Reasoning about padding arithmetic instead of measuring got the row
+height wrong twice. If you cannot verify visually, say so explicitly instead of
 claiming the change works. The manual checklist is in the README's Development
 section.
 
