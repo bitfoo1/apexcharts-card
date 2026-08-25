@@ -1,4 +1,12 @@
 /* eslint-disable no-template-curly-in-string */
+/*
+ * conventional-changelog-conventionalcommits is deliberately held at 9.x.
+ * Version 10 requires conventional-changelog-writer 9+, while the current
+ * stable @semantic-release/release-notes-generator (14.1.1) and
+ * @semantic-release/commit-analyzer (13.0.1) both depend on writer ^8. With
+ * the 10.x preset the release fails in generateNotes with
+ * 'Missing helper: ... requires conventional-changelog-writer@9 or newer'.
+ */
 module.exports = {
   plugins: [
     [
