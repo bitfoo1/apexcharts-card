@@ -1,3 +1,9 @@
+## [2.3.2](https://github.com/bitfoo1/apexcharts-card/compare/v2.3.1...v2.3.2) (2026-08-25)
+
+### Bug Fixes
+
+* **styles:** :bug: stop each tooltip series from rendering a second, value-less row ([c0248a2](https://github.com/bitfoo1/apexcharts-card/commit/c0248a21e9d421299e49a797dc978f3a054830c4))
+
 ## [2.3.1](https://github.com/bitfoo1/apexcharts-card/compare/v2.3.0...v2.3.1) (2026-08-25)
 
 ### Bug Fixes
