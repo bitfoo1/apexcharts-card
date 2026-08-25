@@ -8,6 +8,17 @@
 
 # ApexCharts Card by [@RomRider](https://github.com/RomRider) <!-- omit in toc -->
 
+> [!IMPORTANT]
+> **This is a fork.** Upstream [`RomRider/apexcharts-card`](https://github.com/RomRider/apexcharts-card)
+> has had no commit on `master` since 2025-08-21 and carries 27 unmerged pull
+> requests. This fork exists to keep the card working, not to take it in a new
+> direction: every change is either a dependency upgrade, a fix adopted from an
+> unmerged upstream PR, or test/tooling work. Card configuration stays
+> compatible — see [Differences from upstream](#differences-from-upstream).
+>
+> All documentation below is upstream's and still applies. Bug reports belong
+> here, not upstream, unless you can reproduce them on upstream v2.2.3.
+
 ![Header](https://github.com/RomRider/apexcharts-card/raw/master/docs/Header.png)
 
 This is a highly customizable graph card for [Home-Assistant](https://www.home-assistant.io)'s Lovelace UI.<br/>
@@ -18,6 +29,85 @@ It is also inspired by the great [`mini-graph-card`](https://github.com/kalkih/m
 
 
 However, some things might be broken :grin:
+
+## Differences from upstream <!-- omit in toc -->
+
+### Bundled ApexCharts 6 <!-- omit in toc -->
+
+Upstream v2.2.3 bundles ApexCharts 5.3.3. This fork bundles 6.10.0, which
+brings, without any configuration change:
+
+- A **working shared tooltip after a legend click**. On 5.3.3, hiding one
+  series via the legend broke `tooltip.shared` and the tooltip fell back to a
+  single series (upstream issue
+  [#1097](https://github.com/RomRider/apexcharts-card/issues/1097),
+  [apexcharts.js#5225](https://github.com/apexcharts/apexcharts.js/issues/5225)).
+- Coherent animation when the number of data points changes, instead of points
+  popping in and out. Disable with `apex_config.chart.animations.dynamicAnimation.enabled: false`.
+- Two-finger pinch zoom and pan on touch devices, with axis rails so a vertical
+  swipe still scrolls the page. Tunable via `apex_config.chart.zoom.pinch` and
+  `apex_config.chart.pan.inertia`.
+- Faster rendering and incremental updates on large series.
+
+Newly available through `apex_config`: `chart.animations.easing` (named curve,
+cubic-bezier array or function), `dataLabels.offsetX`/`offsetY` as functions,
+rounded corners and slice spacing on pie/donut.
+
+Two caveats. The bundle grows from 1.63 MB to 2.01 MB. And ApexCharts 6 gates
+seven interactive features (`storyboard`, `link`, `ink`, `measure`,
+`contextMenu`, `perspectives`, `history`) plus the `unit` chart type behind a
+paid plan: they are present and will work if you enable them via `apex_config`,
+but render an `APEXCHARTS` watermark without a license key. Nothing the card
+configures itself touches them.
+
+### Fixes adopted from unmerged upstream PRs <!-- omit in toc -->
+
+| Upstream PR | What it fixes |
+| --- | --- |
+| [#1064](https://github.com/RomRider/apexcharts-card/pull/1064) | A statistics period Home Assistant never reported was bridged by a straight line instead of showing the outage. Missing periods are now materialised as `null` and handled by `fill_raw`. |
+| [#1089](https://github.com/RomRider/apexcharts-card/pull/1089) | Charts rendered clipped on the right in sections views, because the container was measured before layout settled. Also changes `ha-card` to `overflow: visible`. |
+| [#333](https://github.com/RomRider/apexcharts-card/pull/333) | The automatic y-axis maximum on a `stacked` chart used the largest single series value instead of the stacked total, cutting off the top of the stack. |
+| [#1045](https://github.com/RomRider/apexcharts-card/pull/1045) | `show_extremas` labels on negative values were drawn over the curve instead of below it. |
+
+Deliberately **not** adopted:
+[#360](https://github.com/RomRider/apexcharts-card/pull/360) removes a guard in
+the `start_with_last` path without a regression test, and
+[#1066](https://github.com/RomRider/apexcharts-card/pull/1066),
+[#1099](https://github.com/RomRider/apexcharts-card/pull/1099),
+[#1086](https://github.com/RomRider/apexcharts-card/pull/1086) and the other
+open PRs are features rather than fixes.
+
+### Configuration change: `locale` codes <!-- omit in toc -->
+
+**The only breaking configuration change.** ApexCharts shipped three locale
+files under non-ISO names, and the card exposed those names as `locale` values.
+ApexCharts 6 renamed the files, and the card now keys locales by the code Home
+Assistant itself reports:
+
+| Before | Now |
+| --- | --- |
+| `locale: rs` | `locale: sr` (Serbian) |
+| `locale: se` | `locale: sv` (Swedish) |
+| `locale: ua` | `locale: uk` (Ukrainian) |
+
+If you never set `locale` explicitly, this is a pure fix: Home Assistant
+reports `sr`/`sv`/`uk`, which never matched the old keys, so those three
+languages silently fell back to English. `bg`, `gl` and `ro` are now supported
+as well.
+
+### Installing this fork <!-- omit in toc -->
+
+Add it to HACS as a custom repository (Integrations menu → Custom repositories
+→ category *Lovelace*), pointing at this repository. Or build it yourself:
+
+```bash
+mise install && mise run build   # dist/apexcharts-card.js
+```
+
+then copy `dist/apexcharts-card.js` into `config/www/` and register the
+resource as described under [Add resource reference](#add-resource-reference).
+Uninstall the upstream card first, or the two will fight over the
+`apexcharts-card` custom element name.
 
 ## Table of Content <!-- omit in toc -->
 
@@ -152,7 +242,7 @@ The card strictly validates all the options available (but not for the `apex_con
 | `yaxis` | array | | v1.9.0 | See [yaxis](#yaxis-options-multi-y-axis) |
 | `apex_config`| object | | v1.0.0 | Apexcharts API 1:1 mapping. You can see all the options [here](https://apexcharts.com/docs/installation/) --> `Options (Reference)` in the Menu. See [Apex Charts](#apex-charts-options-example) |
 | `experimental` | object | | v1.6.0 | See [experimental](#experimental-features) |
-| `locale` | string | | v1.7.0 | Default is to inherit from Home-Assistant's user configuration. This overrides it and forces the locale. Eg: `en`, or `fr`. Reverts to `en` if the locale is unknown. |
+| `locale` | string | | v1.7.0 | Default is to inherit from Home-Assistant's user configuration. This overrides it and forces the locale. Eg: `en`, or `fr`. Must be an ISO 639-1 code, so Serbian/Swedish/Ukrainian are `sr`/`sv`/`uk` (upstream used `rs`/`se`/`ua`). Reverts to `en` if the locale is unknown. |
 | `brush` | object | | v1.8.0 | See [brush](#brush-experimental-feature) |
 
 
@@ -1088,3 +1178,44 @@ apex_config:
 series:
   - entity: sensor.temperature
 ```
+
+## Development <!-- omit in toc -->
+
+The toolchain is pinned in `mise.toml`; `mise install` provisions it (Node
+26.7.0). Run `mise tasks` for the full list.
+
+```bash
+mise install          # provision Node
+mise run install      # npm ci
+mise run verify       # typecheck + lint + tests + bundle — the CI gate
+mise run watch        # rebuild dist/ on change
+HA_WWW=/path/to/config/www mise run deploy:local
+```
+
+Without mise, the equivalent npm scripts are `npm ci`, `npm run verify`,
+`npm run watch`.
+
+### Tests <!-- omit in toc -->
+
+Unit tests live in `tests/` and run on [vitest](https://vitest.dev):
+
+```bash
+mise run test           # once
+mise run test:watch     # watch mode
+mise run test:coverage  # with coverage
+```
+
+They cover the pure helpers in `src/utils.ts`, the locale key contract that
+`src/apex-layouts.ts` resolves against, and the statistics gap filling. They do
+**not** render a chart: anything touching ApexCharts, layout or the Home
+Assistant connection still has to be verified in a browser. When changing
+rendering, check at least a shared tooltip (including after hiding a series via
+the legend), header states, the `now` line with `span.offset`, a
+`data_generator` series, and card width in a sections view.
+
+### Type checking <!-- omit in toc -->
+
+`npm run typecheck` runs `tsc --noEmit` and is part of `build`. This matters
+because `rollup-plugin-typescript2` serves a stale `.rpt2_cache` after a
+dependency bump and will happily produce a green build for code that does not
+type-check.
