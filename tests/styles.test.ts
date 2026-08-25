@@ -67,3 +67,41 @@ describe('axis tooltip theming', () => {
     expect(css.indexOf(HA_AXIS_OVERRIDE)).toBeGreaterThan(libraryDark);
   });
 });
+
+/**
+ * ApexCharts pads the row itself AND each of the three sub-groups (y, goals, z)
+ * it stacks inside it. A plain value row only uses the y group, so 19px of that
+ * padding is dead space and made every series look like two rows. The card
+ * deliberately overrides those metrics; a future re-sync of the copy from a new
+ * ApexCharts release must not silently drop the override, hence the source-order
+ * assertions.
+ */
+describe('compact tooltip rows', () => {
+  function lastRule(selector: string): string {
+    const at = css.lastIndexOf(`${selector} {`);
+    expect(at, `selector ${selector} not found`).toBeGreaterThan(-1);
+    return css.slice(at, css.indexOf('}', at));
+  }
+
+  it('drops the y-group padding, which a value-only row does not need', () => {
+    expect(lastRule('.apexcharts-tooltip-y-group')).toMatch(/padding:\s*0/);
+  });
+
+  it('wins over the library rule it overrides', () => {
+    const library = css.indexOf('padding: 6px 0 5px');
+    const override = css.lastIndexOf('.apexcharts-tooltip-y-group {');
+    expect(library).toBeGreaterThan(-1);
+    expect(override).toBeGreaterThan(library);
+  });
+
+  it('tightens the row padding instead of the library 4px', () => {
+    expect(lastRule('.apexcharts-tooltip-series-group')).toMatch(/padding:\s*2px 12px/);
+  });
+
+  it('removes the goals negative margin that compensated the dropped padding', () => {
+    const rule = lastRule(
+      '.apexcharts-tooltip-text-goals-label:not(:empty),\n  .apexcharts-tooltip-text-goals-value:not(:empty)',
+    );
+    expect(rule).toMatch(/margin-top:\s*0/);
+  });
+});

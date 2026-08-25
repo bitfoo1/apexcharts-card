@@ -705,6 +705,47 @@ export const stylesApex: CSSResultGroup = css`
     color: var(--primary-text-color);
   }
 
+  /*
+   * Compact rows — a deliberate departure from the library's own metrics.
+   *
+   * ApexCharts stacks three sub-groups (y, goals, z) inside every series row and
+   * pads each of them, on top of the row's own padding. A plain value row uses
+   * only the y group, so that padding is dead space: 19px per row in ApexCharts
+   * 6 (4+4 on the row, 6+5 on the y group), up from 11px in 5.x. At the four to
+   * six series a Home Assistant chart typically shows, that reads as though
+   * every entity occupied two rows.
+   *
+   * The goals negative margin has to go with it: it exists to pull the goals
+   * line back over the padding that is being removed here, and would otherwise
+   * overlap the value above it.
+   */
+  .apexcharts-tooltip-series-group {
+    padding: 2px 12px;
+  }
+
+  .apexcharts-tooltip-series-group.apexcharts-active:last-child,
+  .apexcharts-tooltip-series-group:last-child {
+    padding-bottom: 4px;
+  }
+
+  .apexcharts-tooltip-y-group {
+    padding: 0;
+  }
+
+  .apexcharts-tooltip-text-goals-label,
+  .apexcharts-tooltip-text-goals-value {
+    padding: 2px 0 0;
+  }
+
+  .apexcharts-tooltip-text-goals-label:not(:empty),
+  .apexcharts-tooltip-text-goals-value:not(:empty) {
+    margin-top: 0;
+  }
+
+  .apexcharts-tooltip-title {
+    padding: 6px 12px 2px;
+  }
+
   .apexcharts-xcrosshairs,
   .apexcharts-ycrosshairs {
     pointer-events: none;
