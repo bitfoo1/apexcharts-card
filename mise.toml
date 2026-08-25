@@ -63,3 +63,8 @@ test -f dist/apexcharts-card.js || { echo "dist/apexcharts-card.js missing, run 
 cp dist/apexcharts-card.js "$HA_WWW/apexcharts-card.js"
 echo "copied to $HA_WWW/apexcharts-card.js — hard-refresh the browser (Ctrl+Shift+R)"
 '''
+
+[tasks.'css:diff']
+description = "Report drift between src/styles.ts and the bundled ApexCharts stylesheet"
+usage = 'arg "<selector>" help="Only report selectors containing this substring" default=""'
+run = 'node scripts/css-diff.mjs "$usage_selector"'

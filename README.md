@@ -1217,6 +1217,23 @@ rendering, check at least a shared tooltip (including after hiding a series via
 the legend), header states, the `now` line with `span.offset`, a
 `data_generator` series, and card width in a sections view.
 
+### Keeping the CSS copy in sync <!-- omit in toc -->
+
+The chart renders inside the card's shadow root, so ApexCharts' own
+document-level stylesheet never reaches it — `src/styles.ts` carries a copy.
+After bumping ApexCharts, check the drift:
+
+```bash
+mise run css:diff           # everything
+mise run css:diff tooltip    # only selectors containing "tooltip"
+```
+
+It reports rules the bundled library has that the copy lacks, rules whose
+declarations differ, and rules only the copy has. Not every difference is a bug
+(the Home Assistant theming overrides are intentional), so treat it as a report.
+Skipping this is what produced black tooltip text and duplicated marker rows
+after the ApexCharts 6 upgrade.
+
 ### Type checking <!-- omit in toc -->
 
 `npm run typecheck` runs `tsc --noEmit` and is part of `build`. This matters

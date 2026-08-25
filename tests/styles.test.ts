@@ -2,52 +2,68 @@ import { describe, expect, it } from 'vitest';
 import { stylesApex } from '../src/styles';
 
 /**
- * ApexCharts 6 paints the tooltip from design tokens and sets an explicit
- * `color: var(--apx-tt-color)` whose light default is near-black, where 5.x
- * declared no color and let the text inherit Home Assistant's
- * --primary-text-color. Overriding only the background (as the card did) then
- * produced black text on a dark card under any dark HA theme.
+ * src/styles.ts carries a copy of ApexCharts' stylesheet, because the chart
+ * renders in this card's shadow root where the library's document-level CSS
+ * never reaches. The copy is kept verbatim from the bundled version and then
+ * re-themed by redefining ApexCharts 6's design tokens.
  *
- * These tests pin that the tooltip takes both its background AND its
- * foreground from the Home Assistant theme, so the regression cannot come back
- * through a future refactor of styles.ts.
+ * Two things must hold for that to work, and both are easy to break by
+ * re-syncing the copy from a new ApexCharts release:
+ *   1. the Home Assistant override has to define the tokens, and
+ *   2. it has to come AFTER the library's own light/dark blocks, because the
+ *      specificity is equal and source order decides.
+ *
+ * The regression this guards: ApexCharts 6 sets 'color: var(--apx-tt-color)'
+ * with a near-black light default, where 5.x set no color at all and inherited
+ * --primary-text-color. Without the override, a dark HA theme rendered black
+ * text on a dark tooltip.
  */
 const css = stylesApex.toString();
 
-function rule(selector: string): string {
-  // Naive but sufficient: the stylesheet is a flat list of `sel { ... }` rules.
-  const start = css.indexOf(`${selector} {`);
-  expect(start, `selector ${selector} not found`).toBeGreaterThan(-1);
-  const end = css.indexOf('}', start);
-  return css.slice(start, end);
-}
+const HA_TOOLTIP_OVERRIDE = '--apx-tt-color: var(--primary-text-color)';
+const HA_AXIS_OVERRIDE = '--apx-axt-color: var(--primary-text-color)';
 
 describe('tooltip theming', () => {
-  const tooltip = rule('.apexcharts-tooltip');
-
-  it('maps the ApexCharts 6 tooltip tokens onto Home Assistant variables', () => {
-    expect(tooltip).toContain('--apx-tt-bg: var(--card-background-color)');
-    expect(tooltip).toContain('--apx-tt-color: var(--primary-text-color)');
+  it('redefines the tooltip tokens from Home Assistant variables', () => {
+    expect(css).toContain('--apx-tt-bg: var(--card-background-color)');
+    expect(css).toContain(HA_TOOLTIP_OVERRIDE);
+    expect(css).toContain('--apx-tt-color-muted: var(--secondary-text-color');
+    expect(css).toContain('--apx-tt-border: var(--divider-color');
   });
 
-  it('also sets a plain color, as a fallback for versions without the tokens', () => {
-    expect(tooltip).toMatch(/(?<!-)color: var\(--primary-text-color\)/);
+  it('applies the override to the base rule and to both theme classes', () => {
+    const start = css.indexOf(HA_TOOLTIP_OVERRIDE);
+    const selector = css.lastIndexOf('{', start);
+    const block = css.slice(css.lastIndexOf('}', selector) + 1, selector);
+    expect(block).toContain('.apexcharts-tooltip');
+    expect(block).toContain('.apexcharts-tooltip.apexcharts-theme-light');
+    expect(block).toContain('.apexcharts-tooltip.apexcharts-theme-dark');
   });
 
-  it('never hardcodes a foreground colour on either theme class', () => {
-    for (const selector of [
-      '.apexcharts-tooltip.apexcharts-theme-light',
-      '.apexcharts-tooltip.apexcharts-theme-dark',
-    ]) {
-      const body = rule(selector);
-      expect(body, `${selector} hardcodes a hex colour`).not.toMatch(/color:\s*#[0-9a-f]{3,8}/i);
-      expect(body, `${selector} hardcodes an rgb/rgba colour`).not.toMatch(/(?<!-)color:\s*rgba?\(/i);
-    }
+  it('places the override after the library rules it has to win against', () => {
+    // Equal specificity, so source order decides.
+    const libraryDark = css.lastIndexOf('--apx-tt-color: #f3f4f6');
+    const override = css.indexOf(HA_TOOLTIP_OVERRIDE);
+    expect(libraryDark, 'library dark block not found — copy out of sync?').toBeGreaterThan(-1);
+    expect(override).toBeGreaterThan(libraryDark);
   });
 
-  it('keeps the axis tooltips readable too', () => {
-    const axis = rule('.apexcharts-xaxistooltip,\n  .apexcharts-yaxistooltip');
-    expect(axis).toContain('color: var(--primary-text-color)');
-    expect(tooltip).toContain('--apx-axt-color: var(--primary-text-color)');
+  it('sets a plain color too, as a fallback for versions without the tokens', () => {
+    const start = css.indexOf(HA_TOOLTIP_OVERRIDE);
+    const block = css.slice(start, css.indexOf('}', start));
+    expect(block).toContain('color: var(--primary-text-color)');
+  });
+});
+
+describe('axis tooltip theming', () => {
+  it('redefines the axis tooltip tokens from Home Assistant variables', () => {
+    expect(css).toContain('--apx-axt-bg: var(--card-background-color)');
+    expect(css).toContain(HA_AXIS_OVERRIDE);
+  });
+
+  it('places that override after the library dark block as well', () => {
+    const libraryDark = css.lastIndexOf('--apx-axt-color: #f3f4f6');
+    expect(libraryDark).toBeGreaterThan(-1);
+    expect(css.indexOf(HA_AXIS_OVERRIDE)).toBeGreaterThan(libraryDark);
   });
 });

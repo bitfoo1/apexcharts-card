@@ -52,6 +52,18 @@ Individual steps: `mise run typecheck`, `mise run lint`, `mise run test`,
 
 ## Rules that are easy to get wrong
 
+**`src/styles.ts` is a copy of ApexCharts' stylesheet and rots silently.** The
+chart renders in the card's shadow root, where the library's own document-level
+CSS never applies, so the card ships its own copy. When you bump ApexCharts,
+re-sync it: `mise run css:diff tooltip` (or any selector substring, or nothing
+for everything) reports what the bundled library has that the copy lacks, what
+differs, and what only the copy has. Differences are not automatically bugs —
+the Home Assistant theming overrides are deliberate — so it is a report, not a
+gate. This exact drift already caused two user-visible bugs after the ApexCharts
+6 upgrade: black tooltip text on dark themes, and a duplicated marker row per
+series because v6 renders the marker as an inline `<svg>` while the copy still
+painted v5's `::before` glyph.
+
 **Never trust a green `npm run rollup` alone.** `rollup-plugin-typescript2`
 caches type information in `.rpt2_cache` and, after a dependency bump, serves
 the stale cache — producing a successful build for code that does not

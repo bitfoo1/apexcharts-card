@@ -217,84 +217,158 @@ export const stylesApex: CSSResultGroup = css`
   }
 
   .apexcharts-tooltip {
-    /*
-     * ApexCharts 6 rewrote the tooltip to paint itself from design tokens and,
-     * unlike 5.x, sets an explicit 'color: var(--apx-tt-color)' whose light
-     * default is near-black (#0f172a). 5.x declared no color at all, so the
-     * text simply inherited Home Assistant's --primary-text-color. Combined
-     * with the --card-background-color override below that produced black text
-     * on a dark card under any dark HA theme.
-     *
-     * Home Assistant's theme is the source of truth here, so the tokens are
-     * mapped onto its variables instead of being fought with !important. The
-     * plain 'color' declaration stays as a fallback for versions that do not
-     * know the tokens.
-     */
-    --apx-tt-bg: var(--card-background-color);
-    --apx-tt-color: var(--primary-text-color);
-    --apx-tt-color-muted: var(--secondary-text-color, var(--primary-text-color));
-    --apx-tt-border: var(--divider-color, #e3e3e3);
-    --apx-tt-arrow-bg: var(--card-background-color);
-    --apx-axt-bg: var(--card-background-color);
-    --apx-axt-color: var(--primary-text-color);
-    --apx-axt-border: var(--divider-color, #90a4ae);
-    color: var(--primary-text-color);
-    border-radius: 5px;
-    box-shadow: 2px 2px 6px -4px #999;
+    --apx-tt-bg: #ffffff;
+
+    --apx-tt-border: rgba(15, 23, 42, 0.12);
+
+    --apx-tt-shadow-dir: 1;
+    --apx-tt-shadow:
+      0 calc(var(--apx-tt-shadow-dir) * 1px) 2px rgba(15, 23, 42, 0.06),
+      0 calc(var(--apx-tt-shadow-dir) * 4px) 8px -2px rgba(15, 23, 42, 0.1),
+      0 calc(var(--apx-tt-shadow-dir) * 12px) 20px -8px rgba(15, 23, 42, 0.14);
+    --apx-tt-arrow-bg: var(--apx-tt-bg);
+    --apx-tt-color: #0f172a;
+    --apx-tt-color-muted: rgba(15, 23, 42, 0.55);
+    border-radius: 8px;
+    background: var(--apx-tt-bg);
+    border: 1px solid var(--apx-tt-border);
+    box-shadow: var(--apx-tt-shadow);
+    color: var(--apx-tt-color);
     cursor: default;
-    font-size: 14px;
-    left: 62px;
+    font-size: 13px;
+    left: 0;
+    top: 0;
     opacity: 0;
     pointer-events: none;
     position: absolute;
-    top: 20px;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    padding: 2px 0;
     white-space: nowrap;
     z-index: 12;
-    transition: 0.15s ease all;
+    transition: opacity 0.12s ease;
   }
 
   .apexcharts-tooltip.apexcharts-active {
     opacity: 1;
-    transition: 0.15s ease all;
+    transition: opacity 0.12s ease;
+  }
+  .apexcharts-tooltip.apexcharts-active[data-positioned='true'] {
+    transition:
+      opacity 0.12s ease,
+      left 0.16s ease-out,
+      top 0.16s ease-out;
   }
 
   .apexcharts-tooltip.apexcharts-theme-light {
-    border: 1px solid var(--divider-color, #e3e3e3);
-    background: var(--card-background-color);
   }
 
-  /*
-   * Follows the HA theme rather than ApexCharts' hardcoded dark palette: the
-   * card only ends up on this class when a user sets apex_config.theme.mode,
-   * and even then the surrounding card is still an HA-themed surface.
-   */
   .apexcharts-tooltip.apexcharts-theme-dark {
-    color: var(--primary-text-color);
-    background: var(--card-background-color);
-    border: 1px solid var(--divider-color, rgba(255, 255, 255, 0.16));
+    --apx-tt-bg: #1c1c1f;
+    --apx-tt-border: rgba(255, 255, 255, 0.16);
+
+    --apx-tt-shadow:
+      0 calc(var(--apx-tt-shadow-dir) * 1px) 2px rgba(0, 0, 0, 0.24),
+      0 calc(var(--apx-tt-shadow-dir) * 4px) 8px -2px rgba(0, 0, 0, 0.3),
+      0 calc(var(--apx-tt-shadow-dir) * 12px) 20px -8px rgba(0, 0, 0, 0.38);
+    --apx-tt-color: #f3f4f6;
+    --apx-tt-color-muted: rgba(243, 244, 246, 0.55);
   }
 
   .apexcharts-tooltip * {
     font-family: inherit;
   }
 
+  .apexcharts-tooltip.apexcharts-annotation-tooltip {
+    padding: 6px 10px;
+    max-width: 240px;
+    white-space: normal;
+    line-height: 1.4;
+    pointer-events: none;
+    z-index: 13;
+  }
+
   .apexcharts-tooltip-title {
-    padding: 6px;
-    font-size: 15px;
-    margin-bottom: 4px;
+    padding: 8px 12px 4px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--apx-tt-color-muted);
+    background: transparent;
+    border-bottom: none;
+    margin-bottom: 0;
   }
 
-  .apexcharts-tooltip.apexcharts-theme-light .apexcharts-tooltip-title {
-    background: var(--primary-background-color);
-    border-bottom: 1px solid #ddd;
-  }
-
+  .apexcharts-tooltip.apexcharts-theme-light .apexcharts-tooltip-title,
   .apexcharts-tooltip.apexcharts-theme-dark .apexcharts-tooltip-title {
-    background: var(--primary-background-color);
-    border-bottom: 1px solid var(--divider-color, #333);
+    background: transparent;
+    border-bottom: none;
+  }
+
+  .apexcharts-tooltip.apexcharts-tooltip-fill-series {
+    background: transparent;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    border: none;
+    padding: 0;
+    overflow: hidden;
+    color: #fff;
+  }
+
+  .apexcharts-tooltip.apexcharts-tooltip-fill-series .apexcharts-tooltip-title {
+    background: rgba(0, 0, 0, 0.22);
+    color: #fff;
+    opacity: 1;
+    padding: 6px 12px;
+  }
+
+  .apexcharts-tooltip.apexcharts-tooltip-fill-series .apexcharts-tooltip-series-group {
+    color: #fff;
+  }
+
+  .apexcharts-tooltip-arrow {
+    position: absolute;
+    box-sizing: border-box;
+    width: 10px;
+    height: 10px;
+    background: var(--apx-tt-arrow-bg);
+    transform: rotate(45deg);
+    pointer-events: none;
+    top: calc(var(--apx-tt-arrow-y, 50%) - 5px);
+  }
+
+  .apexcharts-tooltip[data-placement='right'] .apexcharts-tooltip-arrow {
+    left: -6px;
+    border-left: 1px solid var(--apx-tt-border);
+    border-bottom: 1px solid var(--apx-tt-border);
+  }
+
+  .apexcharts-tooltip[data-placement='left'] .apexcharts-tooltip-arrow {
+    right: -6px;
+    border-top: 1px solid var(--apx-tt-border);
+    border-right: 1px solid var(--apx-tt-border);
+  }
+
+  .apexcharts-tooltip[data-placement='top'] .apexcharts-tooltip-arrow,
+  .apexcharts-tooltip[data-placement='bottom'] .apexcharts-tooltip-arrow {
+    top: auto;
+    left: calc(var(--apx-tt-arrow-x, 50%) - 5px);
+  }
+
+  .apexcharts-tooltip[data-placement='top'] .apexcharts-tooltip-arrow {
+    bottom: -6px;
+    border-right: 1px solid var(--apx-tt-border);
+    border-bottom: 1px solid var(--apx-tt-border);
+  }
+
+  .apexcharts-tooltip[data-placement='bottom'] .apexcharts-tooltip-arrow {
+    top: -6px;
+    border-top: 1px solid var(--apx-tt-border);
+    border-left: 1px solid var(--apx-tt-border);
+  }
+
+  .apexcharts-tooltip[data-placement='bottom'] {
+    --apx-tt-shadow-dir: -1;
   }
 
   .apexcharts-tooltip-text-goals-value,
@@ -330,15 +404,6 @@ export const stylesApex: CSSResultGroup = css`
     margin-top: -6px;
   }
 
-  /*
-   * ApexCharts 6 renders the tooltip marker as an inline <svg> child and
-   * dropped the glyph-based ::before shapes that 5.x used. This stylesheet is a
-   * copy of the library's CSS (the chart lives in the card's shadow root, where
-   * the library's own document-level stylesheet does not reach), so it has to
-   * follow: with the 5.x rules kept, every marker painted BOTH the ::before
-   * glyph and the new <svg>, and the unstyled svg wrapped onto its own line —
-   * one extra coloured dot per series, on a row with no value.
-   */
   .apexcharts-tooltip-marker {
     display: inline-flex;
     align-items: center;
@@ -358,8 +423,9 @@ export const stylesApex: CSSResultGroup = css`
   }
 
   .apexcharts-tooltip-series-group {
-    padding: 0 10px;
+    padding: 4px 12px;
     display: none;
+    gap: 8px;
     text-align: left;
     justify-content: left;
     align-items: center;
@@ -369,9 +435,9 @@ export const stylesApex: CSSResultGroup = css`
     opacity: 1;
   }
 
-  .apexcharts-tooltip-series-group.apexcharts-active,
+  .apexcharts-tooltip-series-group.apexcharts-active:last-child,
   .apexcharts-tooltip-series-group:last-child {
-    padding-bottom: 4px;
+    padding-bottom: 8px;
   }
 
   .apexcharts-tooltip-y-group {
@@ -413,27 +479,35 @@ export const stylesApex: CSSResultGroup = css`
 
   .apexcharts-xaxistooltip,
   .apexcharts-yaxistooltip {
+    --apx-axt-bg: #ffffff;
+    --apx-axt-border: rgba(15, 23, 42, 0.08);
+    --apx-axt-color: #0f172a;
+    --apx-axt-shadow: 0 4px 12px -4px rgba(15, 23, 42, 0.18), 0 1px 3px -1px rgba(15, 23, 42, 0.12);
     opacity: 0;
     pointer-events: none;
-    color: var(--primary-text-color);
-    font-size: 13px;
+    color: var(--apx-axt-color);
+    font-size: 12px;
+    font-weight: 500;
     text-align: center;
-    border-radius: 2px;
+    border-radius: 6px;
     position: absolute;
     z-index: 10;
-    background: var(--card-background-color);
-    border: 1px solid #90a4ae;
+    background: var(--apx-axt-bg);
+    border: 1px solid var(--apx-axt-border);
+    box-shadow: var(--apx-axt-shadow);
+  }
+
+  .apexcharts-xaxistooltip.apexcharts-theme-dark,
+  .apexcharts-yaxistooltip.apexcharts-theme-dark {
+    --apx-axt-bg: #1c1c1f;
+    --apx-axt-border: rgba(255, 255, 255, 0.1);
+    --apx-axt-color: #f3f4f6;
+    --apx-axt-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.55), 0 1px 3px -1px rgba(0, 0, 0, 0.45);
   }
 
   .apexcharts-xaxistooltip {
-    padding: 9px 10px;
+    padding: 4px 8px;
     transition: 0.15s ease all;
-  }
-
-  .apexcharts-xaxistooltip.apexcharts-theme-dark {
-    background: rgba(0, 0, 0, 0.7);
-    border: 1px solid rgba(0, 0, 0, 0.5);
-    color: #fff;
   }
 
   .apexcharts-xaxistooltip:after,
@@ -449,14 +523,14 @@ export const stylesApex: CSSResultGroup = css`
 
   .apexcharts-xaxistooltip:after {
     border-color: transparent;
-    border-width: 6px;
-    margin-left: -6px;
+    border-width: 5px;
+    margin-left: -5px;
   }
 
   .apexcharts-xaxistooltip:before {
     border-color: transparent;
-    border-width: 7px;
-    margin-left: -7px;
+    border-width: 6px;
+    margin-left: -6px;
   }
 
   .apexcharts-xaxistooltip-bottom:after,
@@ -470,29 +544,19 @@ export const stylesApex: CSSResultGroup = css`
   }
 
   .apexcharts-xaxistooltip-bottom:after {
-    border-bottom-color: #eceff1;
+    border-bottom-color: var(--apx-axt-bg);
   }
 
   .apexcharts-xaxistooltip-bottom:before {
-    border-bottom-color: #90a4ae;
-  }
-
-  .apexcharts-xaxistooltip-bottom.apexcharts-theme-dark:after,
-  .apexcharts-xaxistooltip-bottom.apexcharts-theme-dark:before {
-    border-bottom-color: rgba(0, 0, 0, 0.5);
+    border-bottom-color: var(--apx-axt-border);
   }
 
   .apexcharts-xaxistooltip-top:after {
-    border-top-color: #eceff1;
+    border-top-color: var(--apx-axt-bg);
   }
 
   .apexcharts-xaxistooltip-top:before {
-    border-top-color: #90a4ae;
-  }
-
-  .apexcharts-xaxistooltip-top.apexcharts-theme-dark:after,
-  .apexcharts-xaxistooltip-top.apexcharts-theme-dark:before {
-    border-top-color: rgba(0, 0, 0, 0.5);
+    border-top-color: var(--apx-axt-border);
   }
 
   .apexcharts-xaxistooltip.apexcharts-active {
@@ -501,13 +565,7 @@ export const stylesApex: CSSResultGroup = css`
   }
 
   .apexcharts-yaxistooltip {
-    padding: 4px 10px;
-  }
-
-  .apexcharts-yaxistooltip.apexcharts-theme-dark {
-    background: rgba(0, 0, 0, 0.7);
-    border: 1px solid rgba(0, 0, 0, 0.5);
-    color: #fff;
+    padding: 3px 8px;
   }
 
   .apexcharts-yaxistooltip:after,
@@ -523,14 +581,14 @@ export const stylesApex: CSSResultGroup = css`
 
   .apexcharts-yaxistooltip:after {
     border-color: transparent;
-    border-width: 6px;
-    margin-top: -6px;
+    border-width: 5px;
+    margin-top: -5px;
   }
 
   .apexcharts-yaxistooltip:before {
     border-color: transparent;
-    border-width: 7px;
-    margin-top: -7px;
+    border-width: 6px;
+    margin-top: -6px;
   }
 
   .apexcharts-yaxistooltip-left:after,
@@ -544,29 +602,19 @@ export const stylesApex: CSSResultGroup = css`
   }
 
   .apexcharts-yaxistooltip-left:after {
-    border-left-color: #eceff1;
+    border-left-color: var(--apx-axt-bg);
   }
 
   .apexcharts-yaxistooltip-left:before {
-    border-left-color: #90a4ae;
-  }
-
-  .apexcharts-yaxistooltip-left.apexcharts-theme-dark:after,
-  .apexcharts-yaxistooltip-left.apexcharts-theme-dark:before {
-    border-left-color: rgba(0, 0, 0, 0.5);
+    border-left-color: var(--apx-axt-border);
   }
 
   .apexcharts-yaxistooltip-right:after {
-    border-right-color: #eceff1;
+    border-right-color: var(--apx-axt-bg);
   }
 
   .apexcharts-yaxistooltip-right:before {
-    border-right-color: #90a4ae;
-  }
-
-  .apexcharts-yaxistooltip-right.apexcharts-theme-dark:after,
-  .apexcharts-yaxistooltip-right.apexcharts-theme-dark:before {
-    border-right-color: rgba(0, 0, 0, 0.5);
+    border-right-color: var(--apx-axt-border);
   }
 
   .apexcharts-yaxistooltip.apexcharts-active {
@@ -575,6 +623,86 @@ export const stylesApex: CSSResultGroup = css`
 
   .apexcharts-yaxistooltip-hidden {
     display: none;
+  }
+
+  .apexcharts-tooltip.apexcharts-active[data-positioned='true'] {
+    transition:
+      opacity 0.12s ease,
+      left 0.16s ease-out,
+      top 0.16s ease-out;
+  }
+
+  .apexcharts-tooltip[data-placement='right'] .apexcharts-tooltip-arrow {
+    left: -6px;
+    border-left: 1px solid var(--apx-tt-border);
+    border-bottom: 1px solid var(--apx-tt-border);
+  }
+
+  .apexcharts-tooltip[data-placement='left'] .apexcharts-tooltip-arrow {
+    right: -6px;
+    border-top: 1px solid var(--apx-tt-border);
+    border-right: 1px solid var(--apx-tt-border);
+  }
+
+  .apexcharts-tooltip[data-placement='top'] .apexcharts-tooltip-arrow,
+  .apexcharts-tooltip[data-placement='bottom'] .apexcharts-tooltip-arrow {
+    top: auto;
+    left: calc(var(--apx-tt-arrow-x, 50%) - 5px);
+  }
+
+  .apexcharts-tooltip[data-placement='top'] .apexcharts-tooltip-arrow {
+    bottom: -6px;
+    border-right: 1px solid var(--apx-tt-border);
+    border-bottom: 1px solid var(--apx-tt-border);
+  }
+
+  .apexcharts-tooltip[data-placement='bottom'] .apexcharts-tooltip-arrow {
+    top: -6px;
+    border-top: 1px solid var(--apx-tt-border);
+    border-left: 1px solid var(--apx-tt-border);
+  }
+
+  .apexcharts-tooltip[data-placement='bottom'] {
+    --apx-tt-shadow-dir: -1;
+  }
+
+  .apexcharts-tooltip-box > div {
+    margin: 4px 0;
+  }
+
+  /*
+   * Home Assistant theming for the block above.
+   *
+   * The chart lives in this card's shadow root, so ApexCharts' own
+   * document-level stylesheet never reaches it — everything above is a copy of
+   * the library's CSS and must be kept in sync with the bundled ApexCharts
+   * version (tests/tooltip-markup.test.ts guards the parts that matter).
+   *
+   * ApexCharts 6 paints the tooltip from design tokens, which makes theming a
+   * matter of redefining those tokens rather than fighting the library with
+   * !important. Home Assistant's theme is the source of truth, so both the
+   * light defaults and the dark-theme block are pointed at HA variables; a
+   * plain 'color' stays as a fallback for a version that drops the tokens.
+   */
+  .apexcharts-tooltip,
+  .apexcharts-tooltip.apexcharts-theme-light,
+  .apexcharts-tooltip.apexcharts-theme-dark {
+    --apx-tt-bg: var(--card-background-color);
+    --apx-tt-arrow-bg: var(--card-background-color);
+    --apx-tt-border: var(--divider-color, #e3e3e3);
+    --apx-tt-color: var(--primary-text-color);
+    --apx-tt-color-muted: var(--secondary-text-color, var(--primary-text-color));
+    color: var(--primary-text-color);
+  }
+
+  .apexcharts-xaxistooltip,
+  .apexcharts-yaxistooltip,
+  .apexcharts-xaxistooltip.apexcharts-theme-dark,
+  .apexcharts-yaxistooltip.apexcharts-theme-dark {
+    --apx-axt-bg: var(--card-background-color);
+    --apx-axt-border: var(--divider-color, #90a4ae);
+    --apx-axt-color: var(--primary-text-color);
+    color: var(--primary-text-color);
   }
 
   .apexcharts-xcrosshairs,
