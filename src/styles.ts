@@ -217,6 +217,28 @@ export const stylesApex: CSSResultGroup = css`
   }
 
   .apexcharts-tooltip {
+    /*
+     * ApexCharts 6 rewrote the tooltip to paint itself from design tokens and,
+     * unlike 5.x, sets an explicit 'color: var(--apx-tt-color)' whose light
+     * default is near-black (#0f172a). 5.x declared no color at all, so the
+     * text simply inherited Home Assistant's --primary-text-color. Combined
+     * with the --card-background-color override below that produced black text
+     * on a dark card under any dark HA theme.
+     *
+     * Home Assistant's theme is the source of truth here, so the tokens are
+     * mapped onto its variables instead of being fought with !important. The
+     * plain 'color' declaration stays as a fallback for versions that do not
+     * know the tokens.
+     */
+    --apx-tt-bg: var(--card-background-color);
+    --apx-tt-color: var(--primary-text-color);
+    --apx-tt-color-muted: var(--secondary-text-color, var(--primary-text-color));
+    --apx-tt-border: var(--divider-color, #e3e3e3);
+    --apx-tt-arrow-bg: var(--card-background-color);
+    --apx-axt-bg: var(--card-background-color);
+    --apx-axt-color: var(--primary-text-color);
+    --apx-axt-border: var(--divider-color, #90a4ae);
+    color: var(--primary-text-color);
     border-radius: 5px;
     box-shadow: 2px 2px 6px -4px #999;
     cursor: default;
@@ -240,13 +262,19 @@ export const stylesApex: CSSResultGroup = css`
   }
 
   .apexcharts-tooltip.apexcharts-theme-light {
-    border: 1px solid #e3e3e3;
+    border: 1px solid var(--divider-color, #e3e3e3);
     background: var(--card-background-color);
   }
 
+  /*
+   * Follows the HA theme rather than ApexCharts' hardcoded dark palette: the
+   * card only ends up on this class when a user sets apex_config.theme.mode,
+   * and even then the surrounding card is still an HA-themed surface.
+   */
   .apexcharts-tooltip.apexcharts-theme-dark {
-    color: #fff;
-    background: rgba(30, 30, 30, 0.8);
+    color: var(--primary-text-color);
+    background: var(--card-background-color);
+    border: 1px solid var(--divider-color, rgba(255, 255, 255, 0.16));
   }
 
   .apexcharts-tooltip * {
@@ -265,8 +293,8 @@ export const stylesApex: CSSResultGroup = css`
   }
 
   .apexcharts-tooltip.apexcharts-theme-dark .apexcharts-tooltip-title {
-    background: rgba(0, 0, 0, 0.7);
-    border-bottom: 1px solid #333;
+    background: var(--primary-background-color);
+    border-bottom: 1px solid var(--divider-color, #333);
   }
 
   .apexcharts-tooltip-text-goals-value,
