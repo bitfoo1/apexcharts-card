@@ -1,3 +1,9 @@
+## [2.3.3](https://github.com/bitfoo1/apexcharts-card/compare/v2.3.2...v2.3.3) (2026-08-25)
+
+### Bug Fixes
+
+* **styles:** :bug: re-sync the tooltip stylesheet with ApexCharts 6 ([022766e](https://github.com/bitfoo1/apexcharts-card/commit/022766e4dcb07491a7ae24fe843761913ad37bc0))
+
 ## [2.3.2](https://github.com/bitfoo1/apexcharts-card/compare/v2.3.1...v2.3.2) (2026-08-25)
 
 ### Bug Fixes
