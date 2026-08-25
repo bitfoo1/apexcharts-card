@@ -1,3 +1,9 @@
+## [2.3.1](https://github.com/bitfoo1/apexcharts-card/compare/v2.3.0...v2.3.1) (2026-08-25)
+
+### Bug Fixes
+
+* **styles:** :bug: keep tooltip text readable on dark Home Assistant themes ([cf6538d](https://github.com/bitfoo1/apexcharts-card/commit/cf6538d5ae565485c5272cc155bdb58db177e8a9))
+
 ## [2.3.0](https://github.com/bitfoo1/apexcharts-card/compare/v2.2.3...v2.3.0) (2026-08-25)
 
 ### Features
