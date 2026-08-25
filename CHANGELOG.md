@@ -1,3 +1,21 @@
+## [2.3.0](https://github.com/bitfoo1/apexcharts-card/compare/v2.2.3...v2.3.0) (2026-08-25)
+
+### Features
+
+* **deps:** :arrow_up: upgrade bundled ApexCharts 5.3.3 -> 6.10.0 ([50f6b24](https://github.com/bitfoo1/apexcharts-card/commit/50f6b2485d5457bbeae5d5e025c36ed5df7a374d))
+
+### Bug Fixes
+
+* **extremas:** :bug: place extrema labels below the line for negative values ([40c3a8a](https://github.com/bitfoo1/apexcharts-card/commit/40c3a8a17f4e0ffcf9997e73e6e1f1ac881c6468)), closes [RomRider#1045](https://github.com/bitfoo1/RomRider/issues/1045)
+* **layout:** :bug: stop charts rendering clipped in sections views ([8e62228](https://github.com/bitfoo1/apexcharts-card/commit/8e6222813202e437ec55ab1698c2c1458e121cb2)), closes [RomRider#1089](https://github.com/bitfoo1/RomRider/issues/1089)
+* **release:** :bug: hold the conventionalcommits preset at 9.x ([a924e6f](https://github.com/bitfoo1/apexcharts-card/commit/a924e6ff767d928aaffae28cb8a66e085a9b9a71))
+* **statistics:** :bug: materialise missing statistic buckets as null ([654097f](https://github.com/bitfoo1/apexcharts-card/commit/654097f8b5f1ab57225b49a3b5f1a4ad8d36bf81)), closes [RomRider#1064](https://github.com/bitfoo1/RomRider/issues/1064)
+* **yaxis:** :bug: sum series maxima for auto y-axis on stacked charts ([05792ad](https://github.com/bitfoo1/apexcharts-card/commit/05792ad08c3336e470c51b142f9335aa8106c322)), closes [RomRider#333](https://github.com/bitfoo1/RomRider/issues/333)
+
+### Documentation
+
+* :memo: mark the repository as a fork and document the dev workflow ([cc33987](https://github.com/bitfoo1/apexcharts-card/commit/cc33987490835a60e7e16c3b0c3b048f6e4b85a0))
+
 ## [2.2.3](https://github.com/RomRider/apexcharts-card/compare/v2.2.2...v2.2.3) (2025-08-21)
 
 ### Bug Fixes
