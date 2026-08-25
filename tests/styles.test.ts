@@ -101,7 +101,9 @@ describe('compact tooltip rows', () => {
   });
 
   it('tightens the line box, which is what actually sets the row height', () => {
-    expect(lastRule('.apexcharts-tooltip-text')).toMatch(/line-height:\s*1\.15/);
+    // 1.35 measures 16.2px per row; see the table in src/styles.ts and
+    // `mise run tooltip:preview` for how to re-measure after changing it.
+    expect(lastRule('.apexcharts-tooltip-text')).toMatch(/line-height:\s*1\.35/);
   });
 
   it('keeps the marker small enough not to set the row height itself', () => {

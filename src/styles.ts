@@ -714,12 +714,15 @@ export const stylesApex: CSSResultGroup = css`
    * 6, up from 11px in 5.x. At the four to six series a Home Assistant chart
    * typically shows, that reads as though every entity occupied two rows.
    *
-   * Measured with scripts/tooltip-preview.mjs (five series plus title, real
-   * ApexCharts 6 markup in a shadow root, headless Firefox):
-   *   stock ApexCharts 6 metrics  32px per row, 195px total
-   *   first pass at compacting    17px per row, 114px total
-   *   these values             13.8px per row,  93px total
-   * Tighter than this starts clipping descenders at the 12px tooltip font.
+   * The row height is set by the line box, not by the padding, so line-height is
+   * the dial to turn. Measured with scripts/tooltip-preview.mjs (five series
+   * plus title, real ApexCharts 6 markup in a shadow root, headless Firefox):
+   *   stock ApexCharts 6 metrics    32px per row, 195px total
+   *   line-height 1.5               18px per row, 114px total
+   *   line-height 1.35 (chosen)   16.2px per row, 105px total
+   *   line-height 1.2             14.4px per row,  96px total
+   *   line-height 1.15            13.8px per row,  93px total
+   * Below ~1.15 descenders start clipping at the 12px tooltip font.
    *
    * The goals negative margin has to go with the padding: it exists to pull the
    * goals line back over the space being removed here, and would otherwise
@@ -743,7 +746,7 @@ export const stylesApex: CSSResultGroup = css`
   }
 
   .apexcharts-tooltip-text {
-    line-height: 1.15;
+    line-height: 1.35;
   }
 
   .apexcharts-tooltip-y-group {
