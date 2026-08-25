@@ -171,6 +171,8 @@ class ChartsCard extends LitElement {
 
   private _serverTimeOffset = 0;
 
+  private _resizeObserver?: ResizeObserver;
+
   @property({ attribute: false }) _lastUpdated: Date = new Date();
 
   @property({ type: Boolean }) private _warning = false;
@@ -197,6 +199,10 @@ class ChartsCard extends LitElement {
   disconnectedCallback() {
     if (this._intervalTimeout) {
       clearInterval(this._intervalTimeout);
+    }
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect();
+      this._resizeObserver = undefined;
     }
     this._updating = false;
     super.disconnectedCallback();
@@ -791,25 +797,52 @@ class ChartsCard extends LitElement {
     const brush = this.shadowRoot?.querySelector('#brush');
     if (!this._apexChart && graph && this._config) {
       this._loaded = true;
+      // In a sections view the card is measured before layout settles, so the
+      // graph container can still report a near-zero width. ApexCharts caches
+      // that width and the chart then renders clipped on the right. Wait one
+      // frame batch for a usable width, hand it to ApexCharts explicitly, and
+      // keep it in sync afterwards. Upstream PR RomRider#1089.
+      let chartWidth = graph.clientWidth;
+      if (chartWidth < 50) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        await this.updateComplete;
+        chartWidth = graph.clientWidth;
+        if (chartWidth < 50) {
+          chartWidth = graph.parentElement?.clientWidth || chartWidth;
+        }
+      }
       const layout = getLayoutConfig(this._config, this._hass, this._graphs);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const chartCfg: any = layout;
+      chartCfg.chart.width = chartWidth > 50 ? chartWidth : '100%';
+      chartCfg.chart.redrawOnParentResize = true;
       if (this._config.series_in_brush.length) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (layout as any).chart.id = Math.random().toString(36).substring(7);
+        chartCfg.chart.id = Math.random().toString(36).substring(7);
       }
       // ApexCharts 6 narrowed the constructor to HTMLElement and its render()/
       // updateOptions() now resolve with the chart instance instead of void.
-      this._apexChart = new ApexCharts(graph as HTMLElement, layout as ApexCharts.ApexOptions);
+      this._apexChart = new ApexCharts(graph as HTMLElement, chartCfg as ApexCharts.ApexOptions);
       const promises: Promise<unknown>[] = [];
       promises.push(this._apexChart.render());
       if (this._config.series_in_brush.length && brush) {
-        this._apexBrush = new ApexCharts(
-          brush as HTMLElement,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          getBrushLayoutConfig(this._config, this._hass, (layout as any).chart.id) as ApexCharts.ApexOptions,
-        );
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const brushCfg: any = getBrushLayoutConfig(this._config, this._hass, chartCfg.chart.id);
+        brushCfg.chart.redrawOnParentResize = true;
+        this._apexBrush = new ApexCharts(brush as HTMLElement, brushCfg as ApexCharts.ApexOptions);
         promises.push(this._apexBrush.render());
       }
       await Promise.all(promises);
+      if (this._apexChart) {
+        this._resizeObserver = new ResizeObserver(() => {
+          const w = graph.clientWidth;
+          if (w > 50) {
+            this._apexChart?.updateOptions({ chart: { width: w } }, false, true);
+            this._apexBrush?.updateOptions({ chart: { width: w } }, false, true);
+          }
+        });
+        this._resizeObserver.observe(graph);
+        if (brush && this._apexBrush) this._resizeObserver.observe(brush);
+      }
       this._firstDataLoad();
     }
   }

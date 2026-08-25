@@ -1,8 +1,15 @@
 import { css, CSSResultGroup } from 'lit';
 
 export const stylesApex: CSSResultGroup = css`
+  /*
+   * 'visible' instead of 'hidden': with overflow hidden the card clipped the
+   * right edge of a chart that briefly measured wider than its container
+   * during layout. Part of upstream PR RomRider#1089 — revert this single
+   * declaration first if tooltips, the legend or the card's rounded corners
+   * start bleeding outside the card.
+   */
   ha-card {
-    overflow: hidden;
+    overflow: visible;
     position: relative;
   }
 
