@@ -1,11 +1,16 @@
 name: 'Close stale issues and PR'
-on:
-  schedule:
-    - cron: '30 1 * * *'
+# Disabled in this fork. Upstream's stale bot is why real bugs such as #1031
+# and #1055 kept getting auto-closed and had to be revived by hand; a fork with
+# a handful of issues has nothing to gain from it. Kept as a manual trigger
+# only so the file does not diverge structurally from upstream.
+on: workflow_dispatch
 
 jobs:
   stale:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
     steps:
       - uses: actions/stale@v10
         with:
