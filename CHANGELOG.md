@@ -1,3 +1,9 @@
+## [2.4.0](https://github.com/bitfoo1/apexcharts-card/compare/v2.3.4...v2.4.0) (2026-08-25)
+
+### Features
+
+* **styles:** :lipstick: tighten the tooltip rows further, to 13.8px ([2faaeb3](https://github.com/bitfoo1/apexcharts-card/commit/2faaeb32683a02fae17b67458269b75ff596df21))
+
 ## [2.3.4](https://github.com/bitfoo1/apexcharts-card/compare/v2.3.3...v2.3.4) (2026-08-25)
 
 ### Bug Fixes
