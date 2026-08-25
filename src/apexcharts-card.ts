@@ -512,11 +512,11 @@ class ChartsCard extends LitElement {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private _generateYAxisConfig(config: ChartCardConfig): ApexYAxis[] | undefined {
+  private _generateYAxisConfig(config: ChartCardConfig): ApexCharts.ApexYAxis[] | undefined {
     if (!config.yaxis) return undefined;
     const burned: boolean[] = [];
     this._yAxisConfig = JSON.parse(JSON.stringify(config.yaxis));
-    const yaxisConfig: ApexYAxis[] = config.series_in_graph.map((serie, serieIndex) => {
+    const yaxisConfig: ApexCharts.ApexYAxis[] = config.series_in_graph.map((serie, serieIndex) => {
       let idx = -1;
       if (config.yaxis?.length !== 1) {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -796,14 +796,16 @@ class ChartsCard extends LitElement {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (layout as any).chart.id = Math.random().toString(36).substring(7);
       }
-      this._apexChart = new ApexCharts(graph, layout);
-      const promises: Promise<void>[] = [];
+      // ApexCharts 6 narrowed the constructor to HTMLElement and its render()/
+      // updateOptions() now resolve with the chart instance instead of void.
+      this._apexChart = new ApexCharts(graph as HTMLElement, layout as ApexCharts.ApexOptions);
+      const promises: Promise<unknown>[] = [];
       promises.push(this._apexChart.render());
       if (this._config.series_in_brush.length && brush) {
         this._apexBrush = new ApexCharts(
-          brush,
+          brush as HTMLElement,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          getBrushLayoutConfig(this._config, this._hass, (layout as any).chart.id),
+          getBrushLayoutConfig(this._config, this._hass, (layout as any).chart.id) as ApexCharts.ApexOptions,
         );
         promises.push(this._apexBrush.render());
       }
@@ -986,7 +988,7 @@ class ChartsCard extends LitElement {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const currentMax = (this._apexChart as any).axes?.w?.globals?.maxX;
       this._headerState = [...this._headerState];
-      const chartUpdates: Promise<void>[] = [];
+      const chartUpdates: Promise<unknown>[] = [];
       chartUpdates.push(
         this._apexChart?.updateOptions(
           graphData,
