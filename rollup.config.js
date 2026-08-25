@@ -2,7 +2,9 @@ import typescript from 'rollup-plugin-typescript2';
 import commonjs from '@rollup/plugin-commonjs';
 import nodeResolve from '@rollup/plugin-node-resolve';
 import babel from '@rollup/plugin-babel';
-import { terser } from 'rollup-plugin-terser';
+// @rollup/plugin-terser replaces the deprecated rollup-plugin-terser, which
+// pinned a vulnerable serialize-javascript and blocked the Rollup 4 upgrade.
+import terser from '@rollup/plugin-terser';
 import serve from 'rollup-plugin-serve';
 import json from '@rollup/plugin-json';
 

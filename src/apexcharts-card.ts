@@ -1,4 +1,3 @@
-import 'array-flat-polyfill';
 import { LitElement, html, TemplateResult, PropertyValues, CSSResultGroup } from 'lit';
 import { property, customElement, eventOptions } from 'lit/decorators.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
@@ -83,7 +82,8 @@ import {
   HOUR_24,
 } from './const';
 import parse from 'parse-duration';
-import tinycolor from '@ctrl/tinycolor';
+// @ctrl/tinycolor v4 removed the callable default export; the class is the API now.
+import { TinyColor } from '@ctrl/tinycolor';
 import { actionHandler } from './action-handler-directive';
 import { OverrideFrontendLocaleData } from './types-ha';
 
@@ -141,7 +141,9 @@ class ChartsCard extends LitElement {
 
   private _interval?: number;
 
-  private _intervalTimeout?: NodeJS.Timeout;
+  // ReturnType<typeof setInterval> rather than NodeJS.Timeout: this bundle runs
+  // in the browser, and @types/node is no longer pulled in transitively.
+  private _intervalTimeout?: ReturnType<typeof setInterval>;
 
   private _colors: string[] = [];
 
@@ -511,7 +513,7 @@ class ChartsCard extends LitElement {
       }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
-      throw new Error(`/// apexcharts-card version ${pjson.version} /// ${e.message}`);
+      throw new Error(`/// apexcharts-card version ${pjson.version} /// ${e.message}`, { cause: e });
     }
     // Full reset only happens in editor mode
     // this._reset();
@@ -1178,7 +1180,7 @@ class ChartsCard extends LitElement {
       },
     });
     if (withTime) {
-      let bgColorTime = tinycolor(computeColor('var(--card-background-color)'));
+      let bgColorTime = new TinyColor(computeColor('var(--card-background-color)'));
       bgColorTime =
         bgColorTime.isValid && bgColorTime.getLuminance() > 0.5 ? bgColorTime.darken(20) : bgColorTime.lighten(20);
       const txtColorTime = computeTextColor(bgColorTime.toHexString());
@@ -1408,8 +1410,8 @@ class ChartsCard extends LitElement {
       if (thres.value > max && arr[index - 1]) {
         const factor = (max - arr[index - 1].value) / (thres.value - arr[index - 1].value);
         color = interpolateColor(
-          tinycolor(arr[index - 1].color || defColor).toHexString(),
-          tinycolor(thres.color || defColor).toHexString(),
+          new TinyColor(arr[index - 1].color || defColor).toHexString(),
+          new TinyColor(thres.color || defColor).toHexString(),
           factor,
         );
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -1426,8 +1428,8 @@ class ChartsCard extends LitElement {
       } else if (thres.value < min && arr[index + 1]) {
         const factor = (arr[index + 1].value - min) / (arr[index + 1].value - thres.value);
         color = interpolateColor(
-          tinycolor(arr[index + 1].color || defColor).toHexString(),
-          tinycolor(thres.color || defColor).toHexString(),
+          new TinyColor(arr[index + 1].color || defColor).toHexString(),
+          new TinyColor(thres.color || defColor).toHexString(),
           factor,
         );
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -1441,11 +1443,11 @@ class ChartsCard extends LitElement {
         }
         opacity = opacity < 0 ? -opacity : opacity;
       }
-      color = color || tinycolor(thres.color || defColor).toHexString();
-      if ([undefined, 'line'].includes(serie.type)) color = tinycolor(color).setAlpha(opacity).toHex8String();
+      color = color || new TinyColor(thres.color || defColor).toHexString();
+      if ([undefined, 'line'].includes(serie.type)) color = new TinyColor(color).setAlpha(opacity).toHex8String();
       return [
         {
-          color: color || tinycolor(thres.color || defColor).toHexString(),
+          color: color || new TinyColor(thres.color || defColor).toHexString(),
           offset:
             scale <= 0 ? 0 : invert ? 100 - (max - thres.value) * (100 / scale) : (max - thres.value) * (100 / scale),
           opacity,
@@ -1604,22 +1606,22 @@ class ChartsCard extends LitElement {
   @eventOptions({ passive: true })
   private handleRippleActivate(evt: Event, index: number | string): void {
     const r = this.shadowRoot?.getElementById(`ripple-${index}`) as Ripple;
-    r && typeof r.startFocus === 'function' && r.startPress(evt);
+    if (r && typeof r.startFocus === 'function') r.startPress(evt);
   }
 
   private handleRippleDeactivate(_, index: number | string): void {
     const r = this.shadowRoot?.getElementById(`ripple-${index}`) as Ripple;
-    r && typeof r.startFocus === 'function' && r.endPress();
+    if (r && typeof r.startFocus === 'function') r.endPress();
   }
 
   private handleRippleFocus(_, index: number | string): void {
     const r = this.shadowRoot?.getElementById(`ripple-${index}`) as Ripple;
-    r && typeof r.startFocus === 'function' && r.startFocus();
+    if (r && typeof r.startFocus === 'function') r.startFocus();
   }
 
   private handleRippleBlur(_, index: number | string): void {
     const r = this.shadowRoot?.getElementById(`ripple-${index}`) as Ripple;
-    r && typeof r.startFocus === 'function' && r.endFocus();
+    if (r && typeof r.startFocus === 'function') r.endFocus();
   }
 
   public getCardSize(): number {

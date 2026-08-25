@@ -2,8 +2,17 @@ import Moment from 'moment-timezone';
 import { extendMoment } from 'moment-range';
 import momentDurationFormatSetup from 'moment-duration-format';
 
-momentDurationFormatSetup(Moment);
-export const moment = extendMoment(Moment);
+/*
+ * The two casts bridge a types-only mismatch: both libraries declare their
+ * parameter as `typeof import('moment')` (a namespace object), while
+ * moment-timezone exports a callable default. Under moduleResolution: bundler
+ * TypeScript no longer conflates the two. Runtime behaviour is unchanged —
+ * moment-timezone IS the moment instance being extended here, which is the
+ * whole point of passing it. Casting via Parameters<> keeps this correct if
+ * either library changes its signature.
+ */
+momentDurationFormatSetup(Moment as unknown as Parameters<typeof momentDurationFormatSetup>[0]);
+export const moment = extendMoment(Moment as unknown as Parameters<typeof extendMoment>[0]);
 export const ONE_HOUR = 1000 * 3600;
 export const HOUR_24 = ONE_HOUR * 24;
 

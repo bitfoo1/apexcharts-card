@@ -6,7 +6,7 @@ jobs:
   release-bundle:
     strategy:
       matrix:
-        node-version: [22.x]
+        node-version: [26.x]
 
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev'
@@ -18,11 +18,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4.4.0
+        uses: actions/setup-node@v6.2.0
         with:
           node-version: ${{ matrix.node-version }}
       - name: Cache Node.js modules
-        uses: actions/cache@v4.2.4
+        uses: actions/cache@v5.0.3
         with:
           path: ~/.npm # npm cache files are stored in `~/.npm` on Linux/macOS
           key: ${{ runner.OS }}-node-${{ matrix.node-version }}-${{ hashFiles('**/package-lock.json') }}
