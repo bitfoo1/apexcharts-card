@@ -1,3 +1,9 @@
+## [2.4.1](https://github.com/bitfoo1/apexcharts-card/compare/v2.4.0...v2.4.1) (2026-08-25)
+
+### Bug Fixes
+
+* **styles:** :lipstick: relax the tooltip rows to 16.2px ([34a8d24](https://github.com/bitfoo1/apexcharts-card/commit/34a8d2417a44dc18fc8e13a0239a2a95514807e5))
+
 ## [2.4.0](https://github.com/bitfoo1/apexcharts-card/compare/v2.3.4...v2.4.0) (2026-08-25)
 
 ### Features
