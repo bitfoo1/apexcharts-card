@@ -1,3 +1,9 @@
+## [2.3.4](https://github.com/bitfoo1/apexcharts-card/compare/v2.3.3...v2.3.4) (2026-08-25)
+
+### Bug Fixes
+
+* **styles:** :bug: compact the tooltip rows, they were 32px tall ([e9c31b8](https://github.com/bitfoo1/apexcharts-card/commit/e9c31b80b46a331709e640b8ad3de80db932c838))
+
 ## [2.3.3](https://github.com/bitfoo1/apexcharts-card/compare/v2.3.2...v2.3.3) (2026-08-25)
 
 ### Bug Fixes
