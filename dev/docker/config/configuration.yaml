@@ -47,8 +47,10 @@ lovelace:
   resource_mode: yaml
   resources:
     # /config/www is the mounted dist/ directory, so this is the freshly built
-    # bundle. Bump the query string if a browser caches too aggressively.
-    - url: /local/apexcharts-card.js
+    # bundle. Home Assistant serves /local with `max-age=2678400`, so a browser
+    # keeps a stale bundle for a month across rebuilds — bump the query string
+    # (or hard-reload) whenever the card seems to ignore a source change.
+    - url: /local/apexcharts-card.js?v=2
       type: module
   dashboards:
     lovelace:
