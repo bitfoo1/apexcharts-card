@@ -761,6 +761,39 @@ views:
                 show: { hidden_by_default: true }
 
           - type: heading
+            heading: y-axis survives hiding the first series
+            heading_style: subtitle
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** hide the **first** legend entry ("forecast"), then the others.
+              - The **y-axis on the left must stay** with its labels and its "W" title, and must rescale to the remaining series.
+              - Hide *every* series and the axis may vanish — that is intended.
+              - **Why this card exists:** upstream bug #1031, fixed in this fork. The card emits one ApexCharts y-axis entry per series and marks only the first one visible; ApexCharts drops an axis once all series mapped to it are collapsed, which with that 1:1 mapping meant hiding series 1 dropped the only visible axis. The shape mirrors the production "PV per string + forecast" card, where the forecast is the first series and the one users click away.
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: '#1031 (hide the first series)' }
+            yaxis:
+              - min: 0
+                apex_config: { title: { text: W } }
+            apex_config:
+              chart: { height: 240 }
+              legend: { position: bottom }
+              tooltip: { shared: true, intersect: false }
+            series:
+              - entity: sensor.dev_pv_forecast
+                name: forecast
+                type: area
+                opacity: 0.1
+              - entity: sensor.dev_pv_string_1
+                name: string 1
+              - entity: sensor.dev_pv_string_2
+                name: string 2
+              - entity: sensor.dev_pv_string_3
+                name: string 3
+
+          - type: heading
             heading: layout minimal, and show.* flags
           - type: markdown
             text_only: true

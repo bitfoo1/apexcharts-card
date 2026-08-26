@@ -44,7 +44,7 @@ import ApexCharts from 'apexcharts';
 import { Ripple } from '@material/mwc-ripple';
 import { stylesApex } from './styles';
 import { HassEntity } from 'home-assistant-js-websocket';
-import { getBrushLayoutConfig, getLayoutConfig } from './apex-layouts';
+import { getBrushLayoutConfig, getLayoutConfig, keepSharedYAxisVisible } from './apex-layouts';
 import GraphEntry from './graphEntry';
 import { createCheckers } from 'ts-interface-checker';
 import {
@@ -523,6 +523,7 @@ class ChartsCard extends LitElement {
   private _generateYAxisConfig(config: ChartCardConfig): ApexCharts.ApexYAxis[] | undefined {
     if (!config.yaxis) return undefined;
     const burned: boolean[] = [];
+    const axisIndexPerEntry: number[] = [];
     this._yAxisConfig = JSON.parse(JSON.stringify(config.yaxis));
     const yaxisConfig: ApexCharts.ApexYAxis[] = config.series_in_graph.map((serie, serieIndex) => {
       let idx = -1;
@@ -565,8 +566,10 @@ class ChartsCard extends LitElement {
         yAxisDup.show = config.yaxis![idx].show === undefined ? true : config.yaxis![idx].show;
         burned[idx] = true;
       }
+      axisIndexPerEntry.push(idx);
       return yAxisDup;
     });
+    keepSharedYAxisVisible(yaxisConfig, axisIndexPerEntry);
     return yaxisConfig;
   }
 

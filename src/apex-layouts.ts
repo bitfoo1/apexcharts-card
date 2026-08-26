@@ -236,6 +236,41 @@ function getYAxis(config: ChartCardConfig) {
       };
 }
 
+/**
+ * Works around upstream issue #1031: the y-axis vanishes when a series is
+ * hidden through the legend.
+ *
+ * The card emits one apex yaxis entry per series and marks only the first entry
+ * of each card axis `show: true`. ApexCharts maps entry N to series N and hides
+ * an axis once every series mapped to it is collapsed — with that 1:1 mapping
+ * the check degenerates to "this one series is collapsed", so hiding the first
+ * series of a shared axis removes the only visible entry and no axis is drawn.
+ *
+ * `showAlways` routes a collapsed series into ApexCharts' ancillary bucket,
+ * which keeps the axis while still emptying the series data, so the remaining
+ * series continue to rescale the axis. It is applied only where several series
+ * share an axis: on a single-series axis, hiding that series legitimately hides
+ * its axis, and that default is left intact.
+ *
+ * @param entries generated apex yaxis entries, one per series, mutated in place
+ * @param axisIndexPerEntry card yaxis index each entry belongs to, parallel to entries
+ */
+export function keepSharedYAxisVisible(
+  entries: { show?: boolean; showAlways?: boolean }[],
+  axisIndexPerEntry: number[],
+): void {
+  const seriesPerAxis = new Map<number, number>();
+  axisIndexPerEntry.forEach((axisIndex) => {
+    seriesPerAxis.set(axisIndex, (seriesPerAxis.get(axisIndex) ?? 0) + 1);
+  });
+  entries.forEach((entry, index) => {
+    if (entry.show !== true) return;
+    if ((seriesPerAxis.get(axisIndexPerEntry[index]) ?? 0) < 2) return;
+    // An explicit value comes from the user's apex_config and wins.
+    if (entry.showAlways === undefined) entry.showAlways = true;
+  });
+}
+
 function getDateTimeFormatter(hours12: boolean | undefined): unknown {
   if (!hours12) {
     return {
