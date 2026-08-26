@@ -12,9 +12,15 @@ import json from '@rollup/plugin-json';
 const dev = process.env.ROLLUP_WATCH;
 
 const serveopts = {
-  contentBase: ['./dist'],
+  // ./dev holds the local harness (index.html + mock-hass.js), ./dist the build
+  // output it imports, so the card can be developed in a plain browser without a
+  // Home Assistant instance or a HACS release.
+  contentBase: ['./dist', './dev'],
   host: '0.0.0.0',
-  port: 5000,
+  // Not 5000: on macOS that port belongs to Control Center's AirPlay Receiver,
+  // which answers 403 and makes it look as though the dev server were broken.
+  // eslint-disable-next-line no-undef
+  port: Number(process.env.DEV_PORT ?? 5050),
   allowCrossOrigin: true,
   headers: {
     'Access-Control-Allow-Origin': '*',

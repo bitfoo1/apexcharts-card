@@ -1,0 +1,31 @@
+# Local Home Assistant for end-to-end checks of the card.
+#
+# Why this exists next to the mock harness in ../: the harness is instant and
+# deterministic, which makes it right for CSS and layout work, but it fakes the
+# frontend. This runs the real thing — same image version as production — so
+# theming, the hass object, the recorder and the resource loading are real. It
+# is the last stop before cutting a release, not the everyday loop.
+#
+# dist/ is mounted as /config/www, so a rebuild is picked up by a browser reload:
+# no release, no HACS, no file copying.
+
+services:
+  homeassistant:
+    # Pinned to the version running in production, so a difference in behaviour
+    # is attributable to the card rather than to Home Assistant.
+    image: ghcr.io/home-assistant/home-assistant:2026.8.2
+    container_name: apexcharts-dev-ha
+    restart: unless-stopped
+    ports:
+      # Bound to localhost on purpose: this instance has a throwaway account and
+      # no TLS, so it must not be reachable from the LAN. 8124 because 8123 is
+      # likely already forwarded to the production instance.
+      - '127.0.0.1:8124:8123'
+    volumes:
+      - ./config:/config
+      # Read-only: the build output is an input here, and nothing in Home
+      # Assistant should ever write into it.
+      - ../../dist:/config/www:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: Europe/Berlin

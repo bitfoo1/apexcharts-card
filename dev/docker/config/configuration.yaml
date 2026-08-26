@@ -1,0 +1,168 @@
+# Configuration for the local dev instance. Not related to production config.
+#
+# Deliberately minimal: no cloud, no discovery, no real integrations. The point
+# is a real Home Assistant frontend around the card, with data that exists
+# within a minute of starting rather than after 36 hours of waiting.
+
+homeassistant:
+  name: apexcharts dev
+  time_zone: Europe/Berlin
+  currency: EUR
+  country: DE
+  unit_system: metric
+  # Auto-login for the dev loop: with the container published on 127.0.0.1 only,
+  # requests arrive from the Docker bridge gateway, so that range has to be
+  # trusted rather than 127.0.0.1. Acceptable here and nowhere else — this
+  # instance is localhost-bound, holds synthetic data and is disposable. The
+  # password provider stays enabled as a fallback (dev/dev).
+  auth_providers:
+    - type: homeassistant
+    - type: trusted_networks
+      trusted_networks:
+        - 127.0.0.1/32
+        - ::1/128
+        - 172.16.0.0/12
+      allow_bypass_login: true
+
+# The frontend, the API and the history/recorder stack are what the card needs.
+frontend:
+history:
+mobile_app:
+system_health:
+
+recorder:
+  # 10 days, matching production. Nothing here needs long-term data, and a small
+  # database keeps the container disposable.
+  purge_keep_days: 10
+  commit_interval: 1
+
+# Lovelace as YAML, so the dev dashboard and the card resource are declared in
+# files instead of clicked together in the UI after every reset.
+#
+# The old top-level `mode: yaml` is deprecated as of Home Assistant 2026.8
+# (repair issue lovelace/yaml_mode_deprecated) and is replaced by an explicit
+# dashboard entry. `resource_mode: yaml` keeps the resource list below in YAML
+# rather than moving it into Settings -> Dashboards -> Resources.
+lovelace:
+  resource_mode: yaml
+  resources:
+    # /config/www is the mounted dist/ directory, so this is the freshly built
+    # bundle. Bump the query string if a browser caches too aggressively.
+    - url: /local/apexcharts-card.js
+      type: module
+  dashboards:
+    lovelace:
+      mode: yaml
+      filename: ui-lovelace.yaml
+      title: Charts
+      icon: mdi:chart-line
+      show_in_sidebar: true
+
+# Synthetic sensors, updated every 5 seconds by a time_pattern trigger. A plain
+# template sensor would only re-render once a minute, which is too slow to fill a
+# 15-minute chart while iterating. The curves are a solar-shaped bell plus noise,
+# so the charts look like the PV data this card is usually pointed at.
+template:
+  - trigger:
+      - platform: time_pattern
+        seconds: '/5'
+    sensor:
+      - name: Dev PV String 1
+        unique_id: dev_pv_string_1
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        state: >
+          {% set minute = now().hour * 60 + now().minute %}
+          {% set bell = [0, sin((minute / 1440 - 0.25) * 2 * pi)] | max %}
+          {{ (bell * 420 * (0.85 + range(0, 30) | random / 100)) | round(1) }}
+
+      - name: Dev PV String 2
+        unique_id: dev_pv_string_2
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        state: >
+          {% set minute = now().hour * 60 + now().minute %}
+          {% set bell = [0, sin((minute / 1440 - 0.28) * 2 * pi)] | max %}
+          {{ (bell * 390 * (0.85 + range(0, 30) | random / 100)) | round(1) }}
+
+      - name: Dev PV String 3
+        unique_id: dev_pv_string_3
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        state: >
+          {% set minute = now().hour * 60 + now().minute %}
+          {% set bell = [0, sin((minute / 1440 - 0.18) * 2 * pi)] | max %}
+          {{ (bell * 260 * (0.85 + range(0, 30) | random / 100)) | round(1) }}
+
+      - name: Dev PV Power
+        unique_id: dev_pv_power
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        state: >
+          {{ (states('sensor.dev_pv_string_1') | float(0)
+              + states('sensor.dev_pv_string_2') | float(0)
+              + states('sensor.dev_pv_string_3') | float(0)) | round(1) }}
+
+      - name: Dev House Consumption
+        unique_id: dev_house_consumption
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        state: >
+          {{ (250 + range(0, 450) | random) | round(1) }}
+
+      - name: Dev Battery SoC
+        unique_id: dev_battery_soc
+        unit_of_measurement: '%'
+        device_class: battery
+        state_class: measurement
+        state: >
+          {% set minute = now().hour * 60 + now().minute %}
+          {{ (50 + 45 * sin(minute / 1440 * 2 * pi)) | round(1) }}
+
+  # A monotonically increasing energy counter, so the statistics types that only
+  # make sense on a total (sum, state, change) have something to work with.
+  - trigger:
+      - platform: time_pattern
+        seconds: '/10'
+    sensor:
+      - name: Dev Energy Total
+        unique_id: dev_energy_total
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total_increasing
+        state: >
+          {% set minutes = now().hour * 60 + now().minute %}
+          {{ (minutes * 0.004 + now().second / 15000) | round(4) }}
+
+  # Mirrors the shape of a Solcast forecast sensor: the values live in an
+  # attribute as a list of {period_start, pv_estimate}, which is what the card's
+  # `data_generator` option is for. Updated once a minute — the list is 48 items,
+  # too heavy for the 5-second trigger above.
+  - trigger:
+      - platform: time_pattern
+        minutes: '/1'
+    sensor:
+      - name: Dev PV Forecast
+        unique_id: dev_pv_forecast
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total
+        state: >
+          {{ 9.6 }}
+        attributes:
+          detailedForecast: >
+            {% set ns = namespace(items=[]) %}
+            {% set midnight = now().replace(hour=0, minute=0, second=0, microsecond=0) %}
+            {% for i in range(0, 48) %}
+              {% set bell = [0, sin((i / 48 - 0.25) * 2 * pi)] | max %}
+              {% set ns.items = ns.items + [{
+                   'period_start': (midnight + timedelta(minutes=30 * i)).isoformat(),
+                   'pv_estimate': (bell * 1.25) | round(3)
+                 }] %}
+            {% endfor %}
+            {{ ns.items }}

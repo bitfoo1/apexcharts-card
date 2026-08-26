@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>apexcharts-card dev</title>
+    <style>
+      /*
+       * A stripped-down Home Assistant theme. The card reads these variables, so
+       * getting them right locally is what makes the local preview meaningful —
+       * the tooltip theming in particular resolves entirely through them.
+       */
+      :root,
+      body.dark {
+        color-scheme: dark;
+        --primary-text-color: #e1e5ea;
+        --secondary-text-color: #9aa4b0;
+        --card-background-color: #1c1f26;
+        --primary-background-color: #111418;
+        --secondary-background-color: #181b21;
+        --divider-color: #2c313a;
+        --primary-color: #03a9f4;
+        --accent-color: #ff9800;
+        --disabled-text-color: #6f7885;
+        --ha-card-border-radius: 12px;
+      }
+      body.light {
+        color-scheme: light;
+        --primary-text-color: #212121;
+        --secondary-text-color: #727272;
+        --card-background-color: #ffffff;
+        --primary-background-color: #fafafa;
+        --secondary-background-color: #e5e5e5;
+        --divider-color: #e0e0e0;
+        --disabled-text-color: #bdbdbd;
+      }
+
+      body {
+        margin: 0;
+        padding: 16px;
+        background: var(--primary-background-color);
+        color: var(--primary-text-color);
+        font-family: Roboto, system-ui, sans-serif;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+      h1 {
+        font-size: 15px;
+        font-weight: 500;
+        margin: 0;
+        color: var(--secondary-text-color);
+      }
+      button {
+        font: inherit;
+        font-size: 13px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid var(--divider-color);
+        background: var(--card-background-color);
+        color: var(--primary-text-color);
+        cursor: pointer;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+        gap: 16px;
+        align-items: start;
+      }
+      .case > .caption {
+        font-size: 12px;
+        color: var(--secondary-text-color);
+        margin-bottom: 6px;
+      }
+      .error {
+        color: #ff6b6b;
+        font-size: 13px;
+        white-space: pre-wrap;
+      }
+      /*
+       * A visible log, because the harness is usually driven headlessly (or via
+       * a screenshot) where the browser console is not available.
+       */
+      #log {
+        margin-top: 16px;
+        padding: 8px 10px;
+        border: 1px solid var(--divider-color);
+        border-radius: 6px;
+        background: var(--card-background-color);
+        color: var(--secondary-text-color);
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+        max-height: 220px;
+        overflow: auto;
+        white-space: pre-wrap;
+      }
+      #log:empty {
+        display: none;
+      }
+      #log .err {
+        color: #ff6b6b;
+      }
+    </style>
+  </head>
+  <body class="dark">
+    <header>
+      <h1>apexcharts-card — local dev harness (mock hass, no Home Assistant)</h1>
+      <button id="theme">toggle light/dark</button>
+      <button id="reload">rebuild picked up on reload</button>
+    </header>
+    <div class="grid" id="grid"></div>
+    <pre id="log"></pre>
+    <script>
+      // Installed before the module loads, so import-time failures are captured.
+      const logEl = document.getElementById('log');
+      function logLine(text, isError) {
+        const line = document.createElement('div');
+        if (isError) line.className = 'err';
+        line.textContent = text;
+        logEl.appendChild(line);
+      }
+      window.devLog = (...args) => logLine(args.map(String).join(' '), false);
+      window.addEventListener('error', (e) => logLine('error: ' + (e.error?.stack || e.message), true));
+      window.addEventListener('unhandledrejection', (e) =>
+        logLine('unhandled rejection: ' + (e.reason?.stack || e.reason), true),
+      );
+      const origError = console.error.bind(console);
+      console.error = (...args) => {
+        logLine('console.error: ' + args.map((a) => (a?.stack ? a.stack : String(a))).join(' '), true);
+        origError(...args);
+      };
+      const origLog = console.log.bind(console);
+      console.log = (...args) => {
+        logLine('console.log: ' + args.map((a) => (a?.stack ? a.stack : String(a))).join(' '), false);
+        origLog(...args);
+      };
+      const origWarn = console.warn.bind(console);
+      console.warn = (...args) => {
+        logLine('console.warn: ' + args.map(String).join(' '), false);
+        origWarn(...args);
+      };
+    </script>
+    <script type="module">
+      import { createMockHass } from './mock-hass.js';
+      // Served from ./dist by rollup-plugin-serve during `mise run dev`.
+      import './apexcharts-card.js';
+
+      /*
+       * Each case is a card config, exercised against the mock hass. Add a case
+       * when reproducing a bug — it then stays as a manual regression check for
+       * the things jsdom cannot render.
+       */
+      const cases = [
+        {
+          caption: 'shared tooltip, 5 series, legend — the ApexCharts 6 tooltip fixes',
+          config: {
+            type: 'custom:apexcharts-card',
+            graph_span: '36h',
+            span: { start: 'day', offset: '-12h' },
+            now: { show: true, label: 'Jetzt' },
+            header: { show: true, title: 'PV je String', show_states: true, colorize_states: true },
+            yaxis: [{ min: 0, apex_config: { title: { text: 'W' } } }],
+            apex_config: {
+              chart: { height: 300 },
+              tooltip: { shared: true, intersect: false },
+              legend: { position: 'bottom' },
+              stroke: { curve: 'smooth' },
+            },
+            all_series_config: { group_by: { func: 'avg', duration: '5min' } },
+            series: [
+              { entity: 'sensor.pv_string_1', name: 'PV1 Sued', color: '#fdd835', stroke_width: 1 },
+              { entity: 'sensor.pv_string_2', name: 'PV2 Sued', color: '#c0ca33', stroke_width: 1 },
+              { entity: 'sensor.pv_string_3', name: 'PV3 Ost', color: '#ffb74d', stroke_width: 1 },
+              { entity: 'sensor.pv_string_4', name: 'PV4 West', color: '#e57373', stroke_width: 1 },
+              { entity: 'sensor.pv_power', name: 'Gesamt', color: '#43a047', stroke_width: 2 },
+            ],
+          },
+        },
+        {
+          caption: 'statistics path (5minute/mean) — exercises fillStatisticGaps',
+          config: {
+            type: 'custom:apexcharts-card',
+            graph_span: '24h',
+            header: { show: true, title: 'Leistungsfluss', show_states: true },
+            apex_config: { chart: { height: 260 }, tooltip: { shared: true } },
+            series: [
+              { entity: 'sensor.pv_power', name: 'PV', statistics: { type: 'mean', period: '5minute' } },
+              { entity: 'sensor.house_consumption', name: 'Haus', statistics: { type: 'mean', period: '5minute' } },
+            ],
+          },
+        },
+        {
+          caption: 'single series, y-axis 0..100, minimal layout',
+          config: {
+            type: 'custom:apexcharts-card',
+            graph_span: '24h',
+            layout: 'minimal',
+            header: { show: true, title: 'Batterie', show_states: true },
+            yaxis: [{ min: 0, max: 100 }],
+            series: [{ entity: 'sensor.battery_soc', name: 'Ladestand' }],
+          },
+        },
+        {
+          caption: 'extremas and a second y-axis',
+          config: {
+            type: 'custom:apexcharts-card',
+            graph_span: '24h',
+            header: { show: true, title: 'PV + Batterie', show_states: true },
+            apex_config: { chart: { height: 260 }, tooltip: { shared: true } },
+            yaxis: [
+              { id: 'power', min: 0, apex_config: { title: { text: 'W' } } },
+              { id: 'soc', opposite: true, min: 0, max: 100 },
+            ],
+            series: [
+              { entity: 'sensor.pv_power', name: 'PV', yaxis_id: 'power', show: { extremas: true } },
+              { entity: 'sensor.battery_soc', name: 'SoC', yaxis_id: 'soc' },
+            ],
+          },
+        },
+      ];
+
+      const hass = createMockHass();
+      const grid = document.getElementById('grid');
+
+      /*
+       * cache: false for every case, for two reasons. The card caches history in
+       * localForage (IndexedDB), which keeps serving yesterday's mock data after
+       * a reload and makes a change look ineffective. And in a headless browser
+       * profile the IndexedDB read never resolves, so the card sits at
+       * 'Loading...' forever — which is exactly how this harness first appeared
+       * broken while only the statistics case (where the card disables its cache
+       * itself, see graphEntry.ts) worked.
+       */
+      for (const { caption, config } of cases.map((c) => ({ ...c, config: { cache: false, ...c.config } }))) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'case';
+        const label = document.createElement('div');
+        label.className = 'caption';
+        label.textContent = caption;
+        wrapper.appendChild(label);
+        try {
+          const card = document.createElement('apexcharts-card');
+          card.setConfig(config);
+          card.hass = hass;
+          wrapper.appendChild(card);
+        } catch (err) {
+          const pre = document.createElement('pre');
+          pre.className = 'error';
+          pre.textContent = String(err?.stack || err);
+          wrapper.appendChild(pre);
+        }
+        grid.appendChild(wrapper);
+      }
+
+      document.getElementById('theme').addEventListener('click', () => {
+        document.body.classList.toggle('dark');
+        document.body.classList.toggle('light');
+      });
+      document.getElementById('reload').addEventListener('click', () => location.reload());
+    </script>
+  </body>
+</html>

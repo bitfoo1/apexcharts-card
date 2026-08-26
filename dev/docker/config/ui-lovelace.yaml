@@ -1,0 +1,1301 @@
+# Dev dashboard — a gallery of everything the card can render.
+#
+# One view per feature family, so a change can be checked against the whole
+# surface rather than the two or three cards that happen to be in production.
+# Every option here is taken from src/types-config.ts, so this doubles as a
+# living inventory of what the card supports.
+#
+# graph_span is deliberately short on most cards: a fresh container has no
+# history, and the synthetic sensors update every five seconds. Cards that read
+# long-term statistics need roughly 15 minutes of runtime before Home Assistant
+# has computed the first 5-minute buckets.
+
+title: apexcharts dev
+
+# Card templates live at the root of the Lovelace config and are pulled in by a
+# card's `config_templates`. Used by the last view.
+apexcharts_card_templates:
+  dev_base:
+    graph_span: 15min
+    update_interval: 5s
+    apex_config:
+      chart:
+        height: 200
+      legend:
+        position: bottom
+    header:
+      show: true
+      show_states: true
+      colorize_states: true
+  dev_smooth_avg:
+    all_series_config:
+      curve: smooth
+      group_by:
+        func: avg
+        duration: 30s
+
+views:
+  # ---------------------------------------------------------------- chart types
+  - title: Chart types
+    path: types
+    type: sections
+    max_columns: 3
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: chart_type — the five the card accepts
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** all five render at all.
+              - **line/scatter:** time axis at the bottom, plausible values, header value equals the last point.
+              - **scatter:** points only, no connecting line.
+              - **pie/donut:** three segments summing to 100 %, legend with colours; the donut has a hole.
+              - **radialBar:** one ring, 0–100 %, the number in the centre.
+              - **Trap:** pie, donut and radialBar use only the *current* value, no history — an empty chart here means "unknown sensor", not "missing history".
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'line (default)', show_states: true }
+            apex_config: { chart: { height: 200 } }
+            series:
+              - entity: sensor.dev_pv_power
+                name: PV
+
+          - type: custom:apexcharts-card
+            chart_type: scatter
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'scatter', show_states: true }
+            apex_config: { chart: { height: 200 } }
+            series:
+              - entity: sensor.dev_pv_power
+                name: PV
+                group_by: { func: avg, duration: 30s }
+
+          - type: custom:apexcharts-card
+            chart_type: pie
+            header: { show: true, title: 'pie', show_states: true }
+            apex_config: { chart: { height: 240 } }
+            series:
+              - entity: sensor.dev_pv_string_1
+                name: PV1
+              - entity: sensor.dev_pv_string_2
+                name: PV2
+              - entity: sensor.dev_pv_string_3
+                name: PV3
+
+          - type: custom:apexcharts-card
+            chart_type: donut
+            header: { show: true, title: 'donut', show_states: true }
+            apex_config: { chart: { height: 240 } }
+            series:
+              - entity: sensor.dev_pv_string_1
+                name: PV1
+              - entity: sensor.dev_pv_string_2
+                name: PV2
+              - entity: sensor.dev_pv_string_3
+                name: PV3
+
+          - type: custom:apexcharts-card
+            chart_type: radialBar
+            header: { show: true, title: 'radialBar', show_states: true }
+            apex_config: { chart: { height: 240 } }
+            series:
+              - entity: sensor.dev_battery_soc
+                name: SoC
+                min: 0
+                max: 100
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: series type — line, area, column
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** the fill and the bars.
+              - **area:** filled below the line, semi-transparent (opacity 0.3).
+              - **column:** bars with a gap, not overlapping, aligned to the bucket boundaries on the time axis.
+              - **mixed:** bars *and* a line in one chart; the shared tooltip lists both values.
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'type: area', show_states: true }
+            apex_config: { chart: { height: 200 } }
+            series:
+              - entity: sensor.dev_pv_power
+                type: area
+                opacity: 0.3
+
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'type: column', show_states: true }
+            apex_config: { chart: { height: 200 } }
+            series:
+              - entity: sensor.dev_pv_power
+                type: column
+                group_by: { func: avg, duration: 1min }
+
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'mixed line + column', show_states: true }
+            apex_config: { chart: { height: 200 }, tooltip: { shared: true } }
+            series:
+              - entity: sensor.dev_pv_power
+                type: column
+                group_by: { func: avg, duration: 1min }
+              - entity: sensor.dev_house_consumption
+                type: line
+                stroke_width: 2
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: stacked and stack_group
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** the stacking arithmetic — this is what upstream PR #333 fixed.
+              - The top of the stack must equal the **sum**, not the largest single value, and the y-axis must not cut it off.
+              - **stacked area:** areas sit on top of each other, not drawn over each other.
+              - **two stack_groups:** PV1+PV2 stack together while the house load forms its **own** stack beside them.
+              - **Legend click:** hide a series — the stack shrinks and the y-axis rescales.
+          - type: custom:apexcharts-card
+            stacked: true
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'stacked: true (columns)', show_states: true }
+            apex_config: { chart: { height: 220 }, tooltip: { shared: true } }
+            all_series_config:
+              type: column
+              group_by: { func: avg, duration: 1min }
+            series:
+              - entity: sensor.dev_pv_string_1
+                name: PV1
+              - entity: sensor.dev_pv_string_2
+                name: PV2
+              - entity: sensor.dev_pv_string_3
+                name: PV3
+
+          - type: custom:apexcharts-card
+            stacked: true
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'stacked area', show_states: true }
+            apex_config: { chart: { height: 220 }, tooltip: { shared: true } }
+            all_series_config:
+              type: area
+              opacity: 0.4
+            series:
+              - entity: sensor.dev_pv_string_1
+                name: PV1
+              - entity: sensor.dev_pv_string_2
+                name: PV2
+
+          - type: custom:apexcharts-card
+            stacked: true
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'two stack_groups', show_states: true }
+            apex_config: { chart: { height: 220 }, tooltip: { shared: true } }
+            all_series_config:
+              type: column
+              group_by: { func: avg, duration: 1min }
+            series:
+              - entity: sensor.dev_pv_string_1
+                name: PV1
+                stack_group: pv
+              - entity: sensor.dev_pv_string_2
+                name: PV2
+                stack_group: pv
+              - entity: sensor.dev_house_consumption
+                name: House
+                stack_group: load
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: curve — all four
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** the line shape, on identical data.
+              - **smooth:** rounded, may overshoot past the data points.
+              - **straight:** straight segments from point to point.
+              - **stepline:** right-angled steps.
+              - **monotoneCubic:** rounded but **without** overshoot — that is precisely the difference from smooth.
+              - **stroke_dash:** dashed, so the second series stays distinguishable.
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'smooth / straight', show_states: true }
+            apex_config: { chart: { height: 220 }, tooltip: { shared: true }, legend: { position: bottom } }
+            all_series_config:
+              entity: sensor.dev_pv_power
+              group_by: { func: avg, duration: 1min }
+            series:
+              - name: smooth
+                entity: sensor.dev_pv_power
+                curve: smooth
+              - name: straight
+                entity: sensor.dev_pv_power
+                curve: straight
+                stroke_dash: 4
+
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'stepline / monotoneCubic', show_states: true }
+            apex_config: { chart: { height: 220 }, tooltip: { shared: true }, legend: { position: bottom } }
+            all_series_config:
+              entity: sensor.dev_pv_power
+              group_by: { func: avg, duration: 1min }
+            series:
+              - name: stepline
+                entity: sensor.dev_pv_power
+                curve: stepline
+              - name: monotoneCubic
+                entity: sensor.dev_pv_power
+                curve: monotoneCubic
+                stroke_dash: 4
+
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'stroke_width and opacity', show_states: true }
+            apex_config: { chart: { height: 220 }, legend: { position: bottom } }
+            all_series_config:
+              entity: sensor.dev_pv_power
+              type: area
+            series:
+              - name: 'thin, transparent'
+                entity: sensor.dev_pv_power
+                stroke_width: 1
+                opacity: 0.1
+              - name: 'thick, opaque'
+                entity: sensor.dev_pv_power
+                stroke_width: 5
+                opacity: 0.6
+
+          - type: heading
+            heading: color_list and locale
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** colours and formatting.
+              - The three series use the purple/cyan/orange from `color_list`, not the ApexCharts default palette.
+              - `locale: en` plus `hours_12: true` put the time axis and tooltip into **AM/PM** and the decimal separator becomes a **dot**.
+              - Compare with any other card, which uses the German format (comma, 24 h).
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            locale: en
+            hours_12: true
+            color_list: ['#8e24aa', '#00acc1', '#f4511e']
+            header: { show: true, title: 'color_list + locale en + hours_12', show_states: true }
+            apex_config: { chart: { height: 220 }, legend: { position: bottom } }
+            series:
+              - entity: sensor.dev_pv_string_1
+              - entity: sensor.dev_pv_string_2
+              - entity: sensor.dev_pv_string_3
+
+  # ------------------------------------------------------------- aggregation
+  - title: Aggregation
+    path: aggregation
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: group_by.func — all ten
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** the aggregates must relate to each other correctly.
+              - **min ≤ avg ≤ max** everywhere, and `raw` is the noisiest line.
+              - **first/last** fall within min/max; `median` tracks close to `avg`.
+              - **sum/delta/diff** on the counter: `sum` rises monotonically, `delta` and `diff` are small positive bars.
+              - **Trap:** buckets are placed at the *end* of their interval (upstream issue #1055 suspects an offset here). At 1-minute buckets that is invisible, so this card only supports a qualitative check.
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'raw / avg / min / max', show_states: true }
+            apex_config: { chart: { height: 240 }, tooltip: { shared: true }, legend: { position: bottom } }
+            all_series_config:
+              entity: sensor.dev_pv_power
+            series:
+              - name: raw
+                entity: sensor.dev_pv_power
+                group_by: { func: raw }
+                stroke_width: 1
+              - name: avg 1min
+                entity: sensor.dev_pv_power
+                group_by: { func: avg, duration: 1min }
+              - name: min 1min
+                entity: sensor.dev_pv_power
+                group_by: { func: min, duration: 1min }
+              - name: max 1min
+                entity: sensor.dev_pv_power
+                group_by: { func: max, duration: 1min }
+
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'first / last / median', show_states: true }
+            apex_config: { chart: { height: 240 }, tooltip: { shared: true }, legend: { position: bottom } }
+            all_series_config:
+              entity: sensor.dev_pv_power
+              group_by: { duration: 1min }
+            series:
+              - name: first
+                entity: sensor.dev_pv_power
+                group_by: { func: first, duration: 1min }
+              - name: last
+                entity: sensor.dev_pv_power
+                group_by: { func: last, duration: 1min }
+              - name: median
+                entity: sensor.dev_pv_power
+                group_by: { func: median, duration: 1min }
+
+          - type: custom:apexcharts-card
+            graph_span: 30min
+            update_interval: 10s
+            header: { show: true, title: 'sum / delta / diff (on the energy counter)', show_states: true }
+            apex_config: { chart: { height: 240 }, tooltip: { shared: true }, legend: { position: bottom } }
+            all_series_config:
+              entity: sensor.dev_energy_total
+              type: column
+            series:
+              - name: sum 5min
+                entity: sensor.dev_energy_total
+                group_by: { func: sum, duration: 5min }
+              - name: delta 5min
+                entity: sensor.dev_energy_total
+                group_by: { func: delta, duration: 5min }
+              - name: diff 5min
+                entity: sensor.dev_energy_total
+                group_by: { func: diff, duration: 5min }
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: group_by.fill and fill_raw
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** how gaps are closed.
+              - **fill: last** holds the previous value (a flat run), **zero** drops to 0, **null** breaks the line.
+              - Clearest on `dev_pv_string_3` at night, when the value is 0.
+              - `fill_raw` in *Extras* does the same for unaggregated data.
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'fill: last / zero / null', show_states: true }
+            apex_config: { chart: { height: 240 }, tooltip: { shared: true }, legend: { position: bottom } }
+            all_series_config:
+              entity: sensor.dev_pv_string_3
+              group_by: { func: avg, duration: 30s }
+            series:
+              - name: 'fill: last'
+                entity: sensor.dev_pv_string_3
+                group_by: { func: avg, duration: 30s, fill: last }
+              - name: 'fill: zero'
+                entity: sensor.dev_pv_string_3
+                group_by: { func: avg, duration: 30s, fill: zero }
+              - name: 'fill: null'
+                entity: sensor.dev_pv_string_3
+                group_by: { func: avg, duration: 30s, fill: 'null' }
+
+          - type: heading
+            heading: start_with_last
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** the left edge.
+              - The line starts right at the left edge of the chart, not at the first bucket.
+              - Without the option there would be a gap of up to one bucket length (2 minutes here).
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'start_with_last', show_states: true }
+            apex_config: { chart: { height: 200 } }
+            series:
+              - entity: sensor.dev_battery_soc
+                group_by: { func: avg, duration: 2min, start_with_last: true }
+
+  # -------------------------------------------------------------- statistics
+  - title: Statistics
+    path: statistics
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: statistics.type — needs ~15 min of runtime
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** long-term statistics instead of raw states.
+              - **Only after ~15 minutes of runtime** does Home Assistant have 5-minute buckets. Empty charts before that are expected.
+              - **mean/min/max:** min ≤ mean ≤ max, in steps five minutes wide.
+              - **state/sum/change** on `dev_energy_total`: `state` and `sum` rise monotonically, `change` is a row of similar bars, one per hour.
+              - **Trap:** this is where the adopted fix from PR #1064 applies — a sensor outage has to appear as a **break**, not as a straight line drawn across it.
+          - type: custom:apexcharts-card
+            graph_span: 2h
+            header: { show: true, title: 'mean / min / max (5minute)', show_states: true }
+            apex_config: { chart: { height: 240 }, tooltip: { shared: true }, legend: { position: bottom } }
+            all_series_config:
+              entity: sensor.dev_pv_power
+            series:
+              - name: mean
+                entity: sensor.dev_pv_power
+                statistics: { type: mean, period: 5minute }
+              - name: min
+                entity: sensor.dev_pv_power
+                statistics: { type: min, period: 5minute }
+              - name: max
+                entity: sensor.dev_pv_power
+                statistics: { type: max, period: 5minute }
+
+          - type: custom:apexcharts-card
+            graph_span: 6h
+            header: { show: true, title: 'state / sum / change on a total (hour)', show_states: true }
+            apex_config: { chart: { height: 240 }, tooltip: { shared: true }, legend: { position: bottom } }
+            all_series_config:
+              entity: sensor.dev_energy_total
+            series:
+              - name: state
+                entity: sensor.dev_energy_total
+                statistics: { type: state, period: hour }
+              - name: sum
+                entity: sensor.dev_energy_total
+                statistics: { type: sum, period: hour }
+              - name: change
+                entity: sensor.dev_energy_total
+                type: column
+                statistics: { type: change, period: hour }
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: statistics.align
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** the horizontal placement of identical values.
+              - Three series carry the same numbers, shifted against each other by up to half a bucket.
+              - **start** sits at the left of the bucket, **middle** in the centre, **end** at the right. The tooltip shows the same values at different times.
+          - type: custom:apexcharts-card
+            graph_span: 2h
+            header: { show: true, title: 'align start / middle / end', show_states: true }
+            apex_config: { chart: { height: 240 }, tooltip: { shared: true }, legend: { position: bottom } }
+            all_series_config:
+              entity: sensor.dev_pv_power
+              statistics: { type: mean, period: 5minute }
+            series:
+              - name: start
+                entity: sensor.dev_pv_power
+                statistics: { type: mean, period: 5minute, align: start }
+              - name: middle
+                entity: sensor.dev_pv_power
+                statistics: { type: mean, period: 5minute, align: middle }
+              - name: end
+                entity: sensor.dev_pv_power
+                statistics: { type: mean, period: 5minute, align: end }
+
+          - type: heading
+            heading: Reference — native statistics-graph
+          - type: markdown
+            text_only: true
+            content: |-
+              **A yardstick, not a test of the card.**
+              - The same entities in Home Assistant's built-in card. If the curve shape differs, the bug is ours; if only the styling differs, it is a design choice.
+          - type: statistics-graph
+            period: 5minute
+            days_to_show: 1
+            stat_types: [mean]
+            entities:
+              - sensor.dev_pv_power
+              - sensor.dev_house_consumption
+
+  # ------------------------------------------------------------- time and span
+  - title: Time & span
+    path: time
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: span.start with offset, and the now line
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** window placement and the now line — this is the configuration used in production.
+              - The window starts **yesterday at 12:00** (start of day minus 12 h) and spans 36 hours.
+              - The red **now line** must sit at the current time, with its label — not at the right edge.
+              - To the right of the now line there is empty space for the future; the series end at "now".
+              - **span.end: minute:** the right edge is rounded to the minute.
+          - type: custom:apexcharts-card
+            graph_span: 36h
+            span: { start: day, offset: '-12h' }
+            now: { show: true, label: now, color: red }
+            header: { show: true, title: 'span.start: day, offset -12h', show_states: true }
+            apex_config: { chart: { height: 240 }, tooltip: { shared: true } }
+            all_series_config:
+              group_by: { func: avg, duration: 5min }
+            series:
+              - entity: sensor.dev_pv_power
+                name: PV
+
+          - type: custom:apexcharts-card
+            graph_span: 1h
+            span: { end: minute }
+            now: { show: true }
+            header: { show: true, title: 'span.end: minute', show_states: true }
+            apex_config: { chart: { height: 200 } }
+            series:
+              - entity: sensor.dev_pv_power
+
+          - type: heading
+            heading: offset — compare against an earlier window
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** the shifted comparison series.
+              - Both curves have the same shape; the dashed one is the trace from 15 minutes ago, moved into the current window.
+              - With `offset_in_name: true` the legend reads **"-15min (-15min)"**, so the offset appears in the name.
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'now vs 15 min ago', show_states: true }
+            apex_config: { chart: { height: 220 }, tooltip: { shared: true }, legend: { position: bottom } }
+            all_series_config:
+              entity: sensor.dev_pv_power
+              group_by: { func: avg, duration: 30s }
+            series:
+              - name: now
+                entity: sensor.dev_pv_power
+              - name: '-15min'
+                entity: sensor.dev_pv_power
+                offset: '-15min'
+                show: { offset_in_name: true }
+                stroke_dash: 4
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: extend_to and time_delta
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** where the line ends on the right.
+              - **extend_to: now** reaches the now line, **end** the right edge of the chart, **false** stops at the last data point.
+              - The three variants must end at visibly different x positions, otherwise the option is not taking effect.
+              - **time_delta: +5min** shifts the curve *right, into the future*, so it crosses the now line.
+          - type: custom:apexcharts-card
+            graph_span: 30min
+            span: { end: minute }
+            now: { show: true }
+            header: { show: true, title: 'extend_to: now / end / false', show_states: true }
+            apex_config: { chart: { height: 240 }, tooltip: { shared: true }, legend: { position: bottom } }
+            all_series_config:
+              entity: sensor.dev_battery_soc
+              group_by: { func: last, duration: 5min }
+            series:
+              - name: 'extend_to: now'
+                entity: sensor.dev_battery_soc
+                extend_to: now
+              - name: 'extend_to: end'
+                entity: sensor.dev_battery_soc
+                extend_to: end
+                stroke_dash: 4
+              - name: 'extend_to: false'
+                entity: sensor.dev_battery_soc
+                extend_to: false
+                stroke_dash: 8
+
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'time_delta: +5min (shifts a forecast forward)', show_states: true }
+            apex_config: { chart: { height: 200 } }
+            series:
+              - entity: sensor.dev_pv_power
+                time_delta: '+5min'
+
+          - type: heading
+            heading: update_interval and update_delay
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** live behaviour — watch for about 30 seconds.
+              - Chart and header refresh every 5 s without jumping or rebuilding (ApexCharts 6 animates a changing point count coherently).
+              - The "last updated" line at the bottom keeps up.
+              - **Trap:** no flicker, and an open tooltip must survive an update.
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            update_delay: 2s
+            header: { show: true, title: '5s interval, 2s delay', show_states: true }
+            show: { last_updated: true }
+            apex_config: { chart: { height: 200 } }
+            series:
+              - entity: sensor.dev_pv_power
+
+  # ----------------------------------------------------------- header & legend
+  - title: Header & legend
+    path: header
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: header options
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** the header area.
+              - **colorize_states:** numbers in the series colour. **floating:** the header sits over the chart instead of taking its own row.
+              - **in_header: raw** is the last raw value, **before_now** the last value left of the now line, **after_now** the first one right of it (with history-only data that is legitimately "N/A").
+              - **as_duration: minute** formats the number as a duration ("9h 43m") rather than watts.
+              - **float_precision: 3** gives three decimals while its neighbour shows one.
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header:
+              show: true
+              title: colorize_states + floating
+              show_states: true
+              colorize_states: true
+              floating: true
+              standard_format: false
+            apex_config: { chart: { height: 220 } }
+            series:
+              - entity: sensor.dev_pv_string_1
+                name: PV1
+                color: '#fdd835'
+              - entity: sensor.dev_pv_string_2
+                name: PV2
+                color: '#c0ca33'
+
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header:
+              show: true
+              show_states: true
+              title: 'in_header: raw / before_now / after_now'
+            apex_config: { chart: { height: 220 }, legend: { position: bottom } }
+            all_series_config:
+              entity: sensor.dev_pv_power
+              group_by: { func: avg, duration: 1min }
+            series:
+              - name: raw
+                entity: sensor.dev_pv_power
+                show: { in_header: raw }
+              - name: before_now
+                entity: sensor.dev_pv_power
+                show: { in_header: before_now }
+              - name: after_now
+                entity: sensor.dev_pv_power
+                show: { in_header: after_now }
+
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'as_duration + float_precision', show_states: true }
+            apex_config: { chart: { height: 200 } }
+            series:
+              - entity: sensor.dev_pv_power
+                name: as duration
+                show: { as_duration: minute }
+              - entity: sensor.dev_battery_soc
+                name: 3 decimals
+                float_precision: 3
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: legend options
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** what the legend contains.
+              - **legend_value: false:** name without a value. **in_legend: false:** the series is missing from the legend but present in the chart.
+              - **hidden_by_default:** one series starts hidden (dimmed legend entry); clicking it reveals the series.
+              - **Trap:** after hiding or showing a series the **shared tooltip must still list every visible series** — that was the ApexCharts 5 bug this fork upgraded to 6 for (#1097). And the **y-axis must not disappear** when the *first* series is hidden (open upstream bug #1031).
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'legend_value off, in_legend off' }
+            apex_config: { chart: { height: 220 }, legend: { position: bottom } }
+            series:
+              - entity: sensor.dev_pv_string_1
+                name: no value
+                show: { legend_value: false }
+              - entity: sensor.dev_pv_string_2
+                name: not in legend
+                show: { in_legend: false }
+              - entity: sensor.dev_pv_string_3
+                name: normal
+
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'hidden_by_default (click the legend)' }
+            experimental: { hidden_by_default: true }
+            apex_config: { chart: { height: 220 }, legend: { position: bottom } }
+            series:
+              - entity: sensor.dev_pv_string_1
+                name: visible
+              - entity: sensor.dev_pv_string_2
+                name: hidden
+                show: { hidden_by_default: true }
+
+          - type: heading
+            heading: layout minimal, and show.* flags
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** the reduced presentation.
+              - **layout: minimal:** no axis grid, just the large value with a sparkline character.
+              - **show.version** prints the card version at the bottom, **last_updated** the timestamp.
+              - **name_in_header: false:** no series name above the value.
+              - **null_in_header / zero_in_header:** nulls and zeros are shown instead of suppressed.
+              - **Trap (ApexCharts 6.8):** area sparklines lost the empty strip below the fill, so check that the area sits flush with the bottom edge.
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            layout: minimal
+            header: { show: true, title: 'layout: minimal', show_states: true }
+            show: { last_updated: true, loading: true }
+            yaxis: [{ min: 0, max: 100 }]
+            series:
+              - entity: sensor.dev_battery_soc
+
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header:
+              show: true
+              show_states: true
+              title: 'name_in_header off, null/zero_in_header'
+            show: { version: true, last_updated: true }
+            apex_config: { chart: { height: 220 }, legend: { position: bottom } }
+            series:
+              - entity: sensor.dev_pv_string_1
+                name: no name in header
+                show: { name_in_header: false }
+              - entity: sensor.dev_pv_string_2
+                name: show null and zero
+                show: { null_in_header: true, zero_in_header: true }
+
+          - type: heading
+            heading: header_actions — tap, hold, double tap
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** header interaction, with mouse or touch.
+              - **Tapping the value** opens the sensor's more-info dialog.
+              - **Tapping the title** opens apexcharts.com in a new tab.
+              - No ripple glitch, and nothing in the browser console.
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header:
+              show: true
+              show_states: true
+              title: tap the value, or the title
+              title_actions:
+                tap_action: { action: url, url_path: 'https://apexcharts.com' }
+            apex_config: { chart: { height: 200 } }
+            series:
+              - entity: sensor.dev_pv_power
+                name: tap = more-info
+                header_actions:
+                  tap_action: { action: more-info }
+                  hold_action: { action: none }
+                  double_tap_action: { action: more-info }
+
+  # ------------------------------------------------------------------ axes
+  - title: Axes
+    path: axes
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: multiple y-axes
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** axis assignment and scales.
+              - **W** from 0 on the left, **%** from 0 to 100 on the right (`opposite: true`). Each series must follow *its* axis — the state-of-charge curve must not be pinned to the watt scale.
+              - **align_to: 100** rounds the axis steps to hundreds.
+              - **`~0` / `~1000`** are soft bounds: the axis may exceed 1000 when the data demands it, but must not fall below it.
+              - **logarithmic:** the spacing compresses towards the top; gaps near 0 are normal.
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'two axes, one opposite', show_states: true }
+            apex_config: { chart: { height: 240 }, tooltip: { shared: true }, legend: { position: bottom } }
+            yaxis:
+              - id: power
+                min: 0
+                apex_config: { title: { text: W } }
+              - id: soc
+                opposite: true
+                min: 0
+                max: 100
+                apex_config: { title: { text: '%' } }
+            series:
+              - entity: sensor.dev_pv_power
+                name: PV
+                yaxis_id: power
+              - entity: sensor.dev_battery_soc
+                name: SoC
+                yaxis_id: soc
+
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'align_to and min/max as ~soft bounds', show_states: true }
+            apex_config: { chart: { height: 240 }, tooltip: { shared: true } }
+            yaxis:
+              - id: sym
+                align_to: 100
+                min: ~0
+                max: ~1000
+            series:
+              - entity: sensor.dev_pv_power
+                yaxis_id: sym
+              - entity: sensor.dev_house_consumption
+                yaxis_id: sym
+
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'logarithmic y-axis', show_states: true }
+            apex_config:
+              chart: { height: 220 }
+              yaxis: { logarithmic: true }
+            series:
+              - entity: sensor.dev_pv_power
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: invert, unit and decimals
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** signs and units.
+              - **invert: true:** consumption mirrors **below** the zero line and generation above it, while the tooltip still reports a *positive* number.
+              - **unit + transform:** the card reads **kW** with two decimals (values around 0.5 rather than 500), and the axis title and tooltip must follow.
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'invert: true (consumption below zero)', show_states: true }
+            apex_config: { chart: { height: 220 }, tooltip: { shared: true }, legend: { position: bottom } }
+            series:
+              - entity: sensor.dev_pv_power
+                name: Generation
+                type: area
+                opacity: 0.3
+              - entity: sensor.dev_house_consumption
+                name: Consumption
+                invert: true
+                type: area
+                opacity: 0.3
+
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'unit override + decimals', show_states: true }
+            apex_config: { chart: { height: 200 } }
+            yaxis: [{ decimals: 2 }]
+            series:
+              - entity: sensor.dev_pv_power
+                name: in kW
+                unit: kW
+                transform: 'return x / 1000;'
+                float_precision: 2
+
+  # ------------------------------------------------------------- annotations
+  - title: Extras
+    path: extras
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: extremas — every variant
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** the min/max markers.
+              - **true:** one label each at the high and low point. **min+time / max+time:** additionally the time.
+              - Markers must sit **on** their point and must not cover the curve.
+              - **Trap:** on **negative** values the labels must sit **below** the line — that is the adopted fix from PR #1045.
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'extremas: true / min+time / max+time', show_states: true }
+            apex_config: { chart: { height: 260 }, tooltip: { shared: true }, legend: { position: bottom } }
+            all_series_config:
+              group_by: { func: avg, duration: 30s }
+            series:
+              - entity: sensor.dev_pv_power
+                name: 'true'
+                show: { extremas: true }
+              - entity: sensor.dev_house_consumption
+                name: min+time
+                show: { extremas: min+time }
+              - entity: sensor.dev_battery_soc
+                name: max+time
+                show: { extremas: max+time }
+
+          - type: heading
+            heading: datalabels
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** values printed at the data point.
+              - **true:** a number above every bar, legible and not overlapping.
+              - **percent** in the donut: percentages inside the segments, summing to 100 %.
+              - **Trap:** with many points the labels must not collide (ApexCharts 6 accepts a function for `dataLabels.offsetY` if they do).
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'datalabels: true', show_states: true }
+            apex_config: { chart: { height: 220 } }
+            series:
+              - entity: sensor.dev_pv_power
+                type: column
+                group_by: { func: avg, duration: 3min }
+                show: { datalabels: true }
+
+          - type: custom:apexcharts-card
+            chart_type: donut
+            header: { show: true, title: 'datalabels: percent', show_states: true }
+            apex_config: { chart: { height: 240 } }
+            all_series_config:
+              show: { datalabels: percent }
+            series:
+              - entity: sensor.dev_pv_string_1
+                name: PV1
+              - entity: sensor.dev_pv_string_2
+                name: PV2
+              - entity: sensor.dev_pv_string_3
+                name: PV3
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: color_threshold (experimental)
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** value-dependent colouring.
+              - The area changes colour with the value: red below 40 %, orange between 40 and 70 %, green above — with a **gradient** across the thresholds.
+              - The **header value** changes along with it (`header_color_threshold`).
+              - The state-of-charge sensor walks through the whole range over a day, so watch it for a while.
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            experimental: { color_threshold: true }
+            header: { show: true, title: 'colour follows value', show_states: true }
+            apex_config: { chart: { height: 240 } }
+            series:
+              - entity: sensor.dev_battery_soc
+                type: area
+                opacity: 0.4
+                show: { header_color_threshold: true }
+                color_threshold:
+                  - value: 0
+                    color: '#e53935'
+                  - value: 40
+                    color: '#fb8c00'
+                  - value: 70
+                    color: '#43a047'
+
+          - type: heading
+            heading: transform and data_generator
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** computed series.
+              - **transform:** values divided by 1000, unit kW, two decimals — the curve shape must match the watt chart.
+              - **data_generator:** this card mirrors the Solcast card in production. The forecast comes from the `detailedForecast` attribute (48 half-hourly values), so it is a bell curve across the **whole day**, including to the right of the now line.
+              - The actual-power curve stops at the now line while the forecast continues. Both appear in the shared tooltip.
+              - **Trap:** `data_generator` is the one path native Home Assistant cards cannot reproduce. Check the time zone here — the forecast peak belongs around midday, not shifted.
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'transform: kW instead of W', show_states: true }
+            apex_config: { chart: { height: 200 } }
+            series:
+              - entity: sensor.dev_pv_power
+                unit: kW
+                float_precision: 2
+                transform: 'return x / 1000;'
+
+          - type: custom:apexcharts-card
+            graph_span: 24h
+            span: { start: day }
+            now: { show: true, label: now }
+            header: { show: true, title: 'data_generator — forecast from an attribute', show_states: true }
+            apex_config: { chart: { height: 240 }, tooltip: { shared: true }, legend: { position: bottom } }
+            yaxis: [{ min: 0 }]
+            series:
+              - entity: sensor.dev_pv_forecast
+                name: Forecast
+                type: area
+                opacity: 0.2
+                stroke_width: 1
+                unit: W
+                data_generator: |
+                  return entity.attributes.detailedForecast.map((e) => {
+                    return [new Date(e.period_start).getTime(), e.pv_estimate * 1000];
+                  });
+              - entity: sensor.dev_pv_power
+                name: Actual
+                stroke_width: 2
+                group_by: { func: avg, duration: 5min }
+
+          - type: heading
+            heading: attribute, and a series hidden from the chart
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** attribute series and header-only series.
+              - The second series reads an **attribute** instead of the state and appears **in the header only** (`in_chart: false`) — no second line may show up in the chart.
+              - The header shows text (the friendly name), not "NaN".
+          - type: custom:apexcharts-card
+            graph_span: 24h
+            header: { show: true, title: 'attribute + in_chart: false', show_states: true }
+            apex_config: { chart: { height: 200 } }
+            series:
+              - entity: sensor.dev_pv_power
+                name: in the chart
+              - entity: sensor.dev_pv_forecast
+                name: header only
+                attribute: friendly_name
+                show: { in_chart: false, in_header: raw }
+
+          - type: heading
+            heading: fill_raw, series min/max clamping, datalabels total
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** raw-data filling, clamping, stack totals.
+              - **fill_raw** behaves like `group_by.fill` but without aggregation: zero drops to 0, last holds, null breaks the line.
+              - **min/max on the series object** *discards* values outside 200–600 W, so the curve goes flat at the top and bottom. This clamps **data**, not the axis.
+              - **datalabels: total:** one sum above each stack, not a number per segment.
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'fill_raw: zero / last / null', show_states: true }
+            apex_config: { chart: { height: 220 }, tooltip: { shared: true }, legend: { position: bottom } }
+            all_series_config:
+              entity: sensor.dev_pv_string_3
+              group_by: { func: raw }
+            series:
+              - name: 'fill_raw: zero'
+                entity: sensor.dev_pv_string_3
+                fill_raw: zero
+              - name: 'fill_raw: last'
+                entity: sensor.dev_pv_string_3
+                fill_raw: last
+                stroke_dash: 4
+              - name: 'fill_raw: null'
+                entity: sensor.dev_pv_string_3
+                fill_raw: 'null'
+                stroke_dash: 8
+
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'series min/max clamp the plotted range', show_states: true }
+            apex_config: { chart: { height: 200 } }
+            series:
+              - entity: sensor.dev_pv_power
+                name: clamped to 200..600 W
+                min: 200
+                max: 600
+
+          - type: custom:apexcharts-card
+            stacked: true
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'datalabels: total on a stack', show_states: true }
+            apex_config: { chart: { height: 240 }, tooltip: { shared: true } }
+            all_series_config:
+              type: column
+              group_by: { func: avg, duration: 3min }
+              show: { datalabels: total }
+            series:
+              - entity: sensor.dev_pv_string_1
+                name: PV1
+              - entity: sensor.dev_pv_string_2
+                name: PV2
+
+  # ----------------------------------------------------------------- brush
+  - title: Brush
+    path: brush
+    type: sections
+    max_columns: 1
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: brush (experimental) — drag the lower band to zoom
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** the selection interaction.
+              - A narrow overview band with a selection frame (15 minutes wide initially) sits below the main chart.
+              - Drag the frame's edge and the main chart zooms; move the frame and the main chart follows.
+              - **Trap (ApexCharts 6.5):** the frame and the bars or curve beneath it must line up exactly — that alignment was off in version 5.
+              - The frame must not jump on its own during an auto-update (upstream issue #954).
+          - type: custom:apexcharts-card
+            graph_span: 1h
+            update_interval: 10s
+            experimental: { brush: true }
+            brush:
+              selection_span: 15min
+            header: { show: true, title: 'brush selection', show_states: true }
+            apex_config: { chart: { height: 280 }, tooltip: { shared: true }, legend: { position: bottom } }
+            all_series_config:
+              group_by: { func: avg, duration: 30s }
+            series:
+              - entity: sensor.dev_pv_power
+                name: PV
+                show: { in_brush: true }
+              - entity: sensor.dev_house_consumption
+                name: House
+                show: { in_brush: true }
+
+  # ----------------------------------------------------- Lovelace integration
+  - title: Integration
+    path: integration
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: config_templates — two templates merged into one card
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** inheritance from templates.
+              - This card declares almost nothing itself: `graph_span`, `update_interval`, the bottom legend, the header with coloured values and the smoothed 30-second averaging all come from two templates in the dashboard root.
+              - If it looks like a normally configured card, merging works. A missing trait means `config_templates` is not being applied.
+          - type: custom:apexcharts-card
+            config_templates: [dev_base, dev_smooth_avg]
+            header:
+              title: from templates (span, interval, legend, header inherited)
+            series:
+              - entity: sensor.dev_pv_power
+                name: PV
+              - entity: sensor.dev_house_consumption
+                name: House
+
+          - type: heading
+            heading: cache disabled
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** unchanged behaviour without the cache.
+              - Visually identical to the other cards; the only difference is that history is refetched on every update.
+              - Useful as a control when a card shows stale data: if this one is current and the others are not, the IndexedDB cache is the cause.
+          - type: custom:apexcharts-card
+            cache: false
+            graph_span: 15min
+            update_interval: 5s
+            header: { show: true, title: 'cache: false (refetches every update)', show_states: true }
+            apex_config: { chart: { height: 200 } }
+            series:
+              - entity: sensor.dev_pv_power
+
+          - type: heading
+            heading: section_mode and grid_options — sizing inside a sections view
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** size and fill inside a sections view.
+              - The card occupies half the column width (`columns: 12`) and four grid rows, and the chart **fills the tile height** rather than keeping a fixed height.
+              - **Trap:** this is exactly where the clipped chart appeared (adopted PR #1089). Check the right edge, then **resize the window** — the chart must follow and must not clip.
+          - type: custom:apexcharts-card
+            section_mode: true
+            graph_span: 15min
+            update_interval: 5s
+            grid_options: { rows: 4, columns: 12 }
+            header: { show: true, title: '6 rows / half width', show_states: true }
+            series:
+              - entity: sensor.dev_battery_soc
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: actions — navigate, call-service, with confirmation
+          - type: markdown
+            text_only: true
+            content: |-
+              **Check:** actions from the header.
+              - **Tapping the title** navigates to the "Chart types" view (`navigate`).
+              - **Tapping the value** asks "Create a notification?" — confirming creates one, cancelling must do **nothing**.
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            header:
+              show: true
+              show_states: true
+              title: title navigates, value calls a service
+              title_actions:
+                tap_action: { action: navigate, navigation_path: /lovelace/types }
+            apex_config: { chart: { height: 200 } }
+            series:
+              - entity: sensor.dev_pv_power
+                name: tap = persistent_notification
+                header_actions:
+                  tap_action:
+                    action: call-service
+                    service: persistent_notification.create
+                    service_data:
+                      title: apexcharts dev
+                      message: header_actions tap_action fired
+                    confirmation:
+                      text: Create a notification?
+
+          - type: heading
+            heading: visibility — hidden while the battery is above 5 %
+          - type: markdown
+            text_only: true
+            content: |-
+              **Expected: this card is normally invisible.**
+              - It appears only while `sensor.dev_battery_soc` is below 5 %. If you can see it, check the sensor value before suspecting a bug.
+              - It demonstrates that Lovelace `visibility` prevents the card from being instantiated at all.
+          - type: custom:apexcharts-card
+            graph_span: 15min
+            update_interval: 5s
+            visibility:
+              - condition: numeric_state
+                entity: sensor.dev_battery_soc
+                below: 5
+            header: { show: true, title: 'usually hidden by a condition', show_states: true }
+            apex_config: { chart: { height: 200 } }
+            series:
+              - entity: sensor.dev_battery_soc
+

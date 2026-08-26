@@ -4,3 +4,8 @@
 
 # rollup-plugin-typescript2 cache: a stale cache silently skips type checking
 .rpt2_cache/
+
+# Local dev Home Assistant state (dev/docker/config is a live HA config dir)
+dev/docker/config/*
+!dev/docker/config/configuration.yaml
+!dev/docker/config/ui-lovelace.yaml

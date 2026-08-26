@@ -19,7 +19,8 @@
     "resolveJsonModule": true,
     "experimentalDecorators": true,
     "sourceMap": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "types": ["node"]
   },
   "include": ["src/*", "tests/*"]
 }
