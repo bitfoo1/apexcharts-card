@@ -1199,6 +1199,130 @@ HA_WWW=/path/to/config/www mise run deploy:local
 Without mise, the equivalent npm scripts are `npm ci`, `npm run verify`,
 `npm run watch`.
 
+### Testing a change without cutting a release <!-- omit in toc -->
+
+Two stages, deliberately separate. Neither needs a release, a HACS download or
+your production Home Assistant.
+
+**Stage 1 — mock harness, for CSS and layout work.** Starts instantly, no Home
+Assistant involved:
+
+```bash
+mise run dev          # rebuilds on change, serves http://localhost:5050
+```
+
+`dev/index.html` renders several card configurations against `dev/mock-hass.js`,
+which fakes the small surface the card actually uses — `hass.states`,
+`hass.language`, `hass.locale`, `hass.config.time_zone`, the history REST call
+and the `recorder/statistics_during_period` WebSocket command — plus a
+`<ha-card>` stand-in. The mock data is deterministic, so a reload shows the same
+curve and a visual change is attributable to your edit. Page errors and the
+card's own logging are mirrored into a panel on the page, because the harness is
+often driven headlessly. Port 5050, not 5000: on macOS that port belongs to
+Control Center's AirPlay Receiver, which answers 403.
+
+Every case runs with `cache: false` — the card otherwise caches history in
+IndexedDB and keeps serving the previous data after a reload.
+
+**Stage 2 — a real Home Assistant in Docker, before releasing.** Same image
+version as production, so a difference in behaviour points at the card:
+
+```bash
+mise run dev:ha       # start the container and finish onboarding
+mise run dev:ha:logs  # follow its log
+mise run dev:ha:down  # stop it, keeping its config directory
+mise run dev:ha:reset # stop it and clear the config directory, for a clean instance
+```
+
+Then open <http://127.0.0.1:8124/lovelace/charts>. `dist/` is mounted read-only
+as `/config/www`, so the dashboard loads `/local/apexcharts-card.js` — the build
+you just made. Rebuild, reload the browser, done.
+
+The dev dashboard is a **gallery of the whole card**: 58 cards across nine views,
+covering every value of `chart_type`, `curve`, `group_by.func`, `statistics.type`
+and `statistics.align`, plus stacking, axes, extremas, datalabels,
+color thresholds, brush, `transform`, `data_generator`, config templates and the
+header actions. It doubles as an inventory of what the card supports, so a change
+can be checked against the full surface rather than the two or three cards that
+happen to be in production.
+
+| View | Covers |
+| --- | --- |
+| Chart types | line, scatter, pie, donut, radialBar; line/area/column; stacking and `stack_group`; all four curves; `color_list`, `locale`, `hours_12` |
+| Aggregation | all ten `group_by.func` values, `fill`, `fill_raw`, `start_with_last` |
+| Statistics | all six `statistics.type` values, both period lengths, all three `align` values, plus the native `statistics-graph` for comparison |
+| Time & span | `span.start`/`end` with offset, the now line, series `offset`, `extend_to`, `time_delta`, `update_interval`/`update_delay` |
+| Header & legend | `colorize_states`, `floating`, every `in_header` mode, `as_duration`, legend flags, `hidden_by_default`, `layout: minimal`, header actions |
+| Axes | multiple and opposite axes, `align_to`, soft `~` bounds, logarithmic, `invert`, unit override |
+| Extras | all `extremas` variants, `datalabels` including `total`/`percent`, `color_threshold`, `transform`, `data_generator` on an attribute, series `min`/`max` |
+| Brush | the experimental brush with a selection span |
+| Integration | `config_templates`, `cache: false`, `section_mode` + `grid_options`, `visibility`, navigate/call-service actions with confirmation |
+
+Every group in the gallery is preceded by a **review note**: what the cards below
+are supposed to look like, and the specific traps worth checking — the shared
+tooltip after a legend click, the stacked y-axis maximum, extrema labels on
+negative values, card width in a sections view, and so on. Several notes point at
+the upstream issue or PR they came from, so a reviewer can tell intended
+behaviour from a regression without reading the source.
+
+The dashboard is checked, not hand-audited:
+
+```bash
+mise run dev:dashboard:check
+```
+
+It reads the **parsed** configuration from the running container and validates
+every card with the checker the card itself runs in `setConfig`, then asserts that
+no heading is missing its review note. Two mistakes it catches are invisible in
+the YAML source: an unquoted flow-mapping title containing a comma silently
+becomes a second key, and `all_series_config.entity` does not satisfy validation
+because `strictCheck` runs before `all_series_config` is merged, so `entity` is
+required on every `series` entry. Without a running container the check skips
+itself, so CI stays green without Docker.
+
+Beyond the six power sensors, the container provides `sensor.dev_energy_total`
+(`total_increasing`, for the statistics types that need a counter) and
+`sensor.dev_pv_forecast`, whose `detailedForecast` attribute mirrors a Solcast
+sensor so `data_generator` has something realistic to read.
+
+`mise run dev:ha` is idempotent: onboarding runs once, and on later starts it
+reports `already onboarded`. `dev:ha:reset` is the one that gives you a clean
+slate — `docker compose down -v` alone would not, because the config directory is
+a bind mount, so the database, `.storage` and the logs would survive it.
+
+The instance is deliberately throwaway: bound to 127.0.0.1, auto-login from the
+Docker bridge, and six synthetic sensors updated every five seconds by a
+`time_pattern` trigger, so a fresh container has usable history within a minute.
+That is why the dev dashboard uses `graph_span: 15min`; the statistics cards need
+roughly 15 minutes of runtime before Home Assistant has computed 5-minute
+buckets.
+
+#### Credentials <!-- omit in toc -->
+
+| | |
+| --- | --- |
+| URL | <http://127.0.0.1:8124> |
+| Username | `dev` |
+| Password | `dev` |
+
+Defined in `dev/docker/bootstrap.mjs` (the `USER` constant) and created there
+during onboarding. You normally never type them: `configuration.yaml` enables the
+`trusted_networks` auth provider with `allow_bypass_login`, so opening the URL
+logs you straight in. The password provider stays enabled as a fallback — for
+instance when the Docker bridge network sits outside the trusted range.
+
+To change them, edit `USER` in `bootstrap.mjs`, then `mise run dev:ha:reset &&
+mise run dev:ha` — the account already exists in `.storage`, so a rerun alone
+will not update it.
+
+These credentials are safe *only* because of how this instance is set up: it is
+published on 127.0.0.1 only, it has no TLS, it contains synthetic data, and it
+holds none of your integrations. Do not reuse the pattern for anything reachable
+from the network.
+
+Only `configuration.yaml` and `ui-lovelace.yaml` under `dev/docker/config` are
+tracked; everything Home Assistant writes there is ignored.
+
 ### Tests <!-- omit in toc -->
 
 Unit tests live in `tests/` and run on [vitest](https://vitest.dev):

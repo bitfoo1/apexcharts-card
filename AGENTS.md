@@ -33,7 +33,10 @@ rewriting 30 upstream lines — see `eslint.config.mjs` for that pattern.
 | `src/types-config.ts` | The user-facing YAML config types. **Generated companion:** `src/types-config-ti.ts` via `npm run build:types-check` — never edit it by hand. |
 | `src/utils.ts`, `src/const.ts`, `src/locales.ts`, `src/styles.ts` | Helpers, defaults, ApexCharts locales, CSS. |
 | `tests/` | Vitest unit tests. |
-| `test/` | **Not tests.** A Home Assistant dev instance config (`configuration.yaml`, `ui-lovelace.yaml`) inherited from upstream. |
+| `dev/` | Local dev harness: `index.html` plus `mock-hass.js`, served by `mise run dev`. No Home Assistant needed. |
+| `dev/docker/` | A throwaway Home Assistant instance (`mise run dev:ha`) that mounts `dist/` as `/config/www`. `config/` is a live HA config directory; only `configuration.yaml` and `ui-lovelace.yaml` are tracked. |
+| `scripts/` | `css-diff.mjs` (stylesheet drift vs the bundled ApexCharts), `tooltip-preview.mjs` (measure the tooltip in a browser), `update_readme.sh` (used by semantic-release). |
+| `test/` | **Not tests.** A Home Assistant dev instance config (`configuration.yaml`, `ui-lovelace.yaml`) inherited from upstream. Superseded by `dev/docker/`. |
 | `mise.toml` | Pinned toolchain and the task list. |
 
 ## Workflow
@@ -49,6 +52,48 @@ without it passing.
 
 Individual steps: `mise run typecheck`, `mise run lint`, `mise run test`,
 `mise run build`, `mise run clean`.
+
+### Verifying a change without cutting a release
+
+Never publish a release to test something — there are two local stages, and
+using them is the expected loop:
+
+| Stage | Command | Use it for |
+| --- | --- | --- |
+| Mock harness | `mise run dev` → <http://localhost:5050> | CSS, layout, markup. Instant, deterministic, no Home Assistant. Errors and card logging appear in a panel on the page. |
+| Real Home Assistant | `mise run dev:ha` → <http://127.0.0.1:8124/lovelace/charts> | End-to-end before a release: real frontend, real recorder, real theming. `dist/` is mounted as `/config/www`, so a rebuild plus browser reload is the whole loop. Login `dev` / `dev`, though `trusted_networks` auto-login usually makes that unnecessary. Its dashboard is a 58-card gallery of every documented option — use it to check a change against the whole surface, and extend it when you add or fix a feature. |
+| Tooltip metrics | `mise run tooltip:preview [git-ref...]` | Anything about rendered size — prints measured pixels and writes a screenshot. |
+
+Notes that cost time to rediscover:
+
+- The harness sets `cache: false` on every case. The card caches history in
+  IndexedDB, which serves stale data after a reload, and in a headless browser
+  profile that read never resolves — the card then sits at `Loading...` forever.
+  Only the statistics path is unaffected, because the card disables its own cache
+  there (`graphEntry.ts`).
+- The dev container's dashboard uses `graph_span: 15min` because a fresh instance
+  has no history; its synthetic sensors update every five seconds. Statistics
+  cards need ~15 minutes of runtime before 5-minute buckets exist.
+- `mise run dev:ha` is idempotent. Home Assistant unregisters its onboarding API
+  once onboarding is done, so a 404 there means "already onboarded", not a
+  failure. Use `mise run dev:ha:reset` for a clean instance: `docker compose down
+  -v` does not reset anything, because the config directory is a bind mount.
+- The dev instance's credentials (`dev` / `dev`) live in the `USER` constant of
+  `dev/docker/bootstrap.mjs` and are created during onboarding. Changing them
+  requires `dev:ha:reset` afterwards, because the account is already in
+  `.storage`. They are acceptable only because the container is published on
+  127.0.0.1 with synthetic data — never carry that pattern anywhere else.
+- Headless Firefox can screenshot the harness but **not** the Home Assistant SPA
+  — for stage 2, look at it in a real browser.
+- `dev/docker/config` is a live Home Assistant config directory. Only
+  `configuration.yaml` and `ui-lovelace.yaml` are tracked.
+- `mise run dev:dashboard:check` validates every dev-dashboard card against the
+  card's own checker and asserts that each heading has a review note. Add a card,
+  add its note — the check fails otherwise. Two mistakes it caught are invisible
+  in the YAML source and worth knowing: an unquoted flow-mapping title containing
+  a comma becomes a second key, and `all_series_config.entity` does **not**
+  satisfy validation because `strictCheck` runs before `all_series_config` is
+  merged — `entity` is required on every `series` entry.
 
 ## Rules that are easy to get wrong
 
@@ -121,6 +166,21 @@ Why the change is needed, what it affects, and what remains unverified.
 Types in use: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`, `ci`.
 The release workflow uses semantic-release, so the type prefix determines
 versioning. Bodies explain rationale; the code shows the mechanics.
+
+## Language
+
+**Everything in this repository is written in English** — code, comments, commit
+messages, documentation, dev-harness copy, dashboard review notes, test names,
+script output. Upstream is an English project and this fork stays diffable
+against it, so a German sentence in a comment or a card title is a defect even
+when the surrounding logic is correct.
+
+This applies to content that only ever appears locally, such as the dev
+dashboard's card titles and series names: a reviewer or agent should not have to
+switch languages when moving between `src/` and `dev/`.
+
+Converse with the user in whatever language they use; write into the repository
+in English.
 
 ## Documentation style
 
