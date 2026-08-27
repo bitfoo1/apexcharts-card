@@ -17,7 +17,7 @@ import { DateRange } from 'moment-range';
 import { DEFAULT_STATISTICS_PERIOD, DEFAULT_STATISTICS_TYPE, moment } from './const';
 import parse from 'parse-duration';
 import SparkMD5 from 'spark-md5';
-import { ChartCardSpanExtConfig, StatisticsPeriod } from './types-config';
+import { ChartCardSpanExtConfig, GroupByFill, StatisticsPeriod } from './types-config';
 import * as pjson from '../package.json';
 
 /**
@@ -520,65 +520,12 @@ export default class GraphEntry {
   }
 
   private _dataBucketer(history: EntityEntryCache, timeRange: DateRange): HistoryBuckets {
-    const ranges = Array.from(timeRange.reverseBy('milliseconds', { step: this._groupByDurationMs })).reverse();
-    // const res: EntityCachePoints[] = [[]];
-    const buckets: HistoryBuckets = [];
-    ranges.forEach((range, index) => {
-      buckets[index] = { timestamp: range.valueOf(), data: [] };
+    return bucketHistory(history?.data ?? [], timeRange, {
+      durationMs: this._groupByDurationMs,
+      fill: this._config.group_by.fill,
+      startWithLast: this._config.group_by.start_with_last,
+      hasDataGenerator: !!this._config.data_generator,
     });
-    history?.data.forEach((entry) => {
-      buckets.some((bucket, index) => {
-        if (bucket.timestamp > entry[0] && index > 0) {
-          if (entry[0] >= buckets[index - 1].timestamp) {
-            buckets[index - 1].data.push(entry);
-            return true;
-          }
-        }
-        return false;
-      });
-    });
-    let lastNonNullBucketValue: number | null = null;
-    const now = new Date().getTime();
-    buckets.forEach((bucket, index) => {
-      if (bucket.data.length === 0) {
-        if (this._config.group_by.fill === 'last' && (bucket.timestamp <= now || this._config.data_generator)) {
-          bucket.data[0] = [bucket.timestamp, lastNonNullBucketValue];
-        } else if (this._config.group_by.fill === 'zero' && (bucket.timestamp <= now || this._config.data_generator)) {
-          bucket.data[0] = [bucket.timestamp, 0];
-        } else if (this._config.group_by.fill === 'null') {
-          bucket.data[0] = [bucket.timestamp, null];
-        }
-      } else {
-        lastNonNullBucketValue = bucket.data.slice(-1)[0][1];
-      }
-      if (this._config.group_by.start_with_last) {
-        if (index > 0) {
-          if (bucket.data.length === 0 || bucket.data[0][0] !== bucket.timestamp) {
-            const prevBucketData = buckets[index - 1].data;
-            bucket.data.unshift([bucket.timestamp, prevBucketData[prevBucketData.length - 1][1]]);
-          }
-        } else {
-          const firstIndexAfter = history.data.findIndex((entry) => {
-            if (entry[0] > bucket.timestamp) return true;
-            return false;
-          });
-          if (firstIndexAfter > 0) {
-            bucket.data.unshift([bucket.timestamp, history.data[firstIndexAfter - 1][1]]);
-          }
-        }
-      }
-    });
-    buckets.shift();
-    buckets.pop();
-    // Remove nulls at the end
-    while (
-      buckets.length > 0 &&
-      (buckets[buckets.length - 1].data.length === 0 ||
-        (buckets[buckets.length - 1].data.length === 1 && buckets[buckets.length - 1].data[0][1] === null))
-    ) {
-      buckets.pop();
-    }
-    return buckets;
   }
 
 }
@@ -697,3 +644,85 @@ export const AGGREGATE_FUNCS = {
   delta: aggregateDelta,
   diff: aggregateDiff,
 };
+
+/**
+ * Groups raw points into fixed-width buckets for the group_by aggregations.
+ *
+ * A bucket carries the timestamp of the START of its interval and holds the
+ * points in [timestamp, timestamp + durationMs). Boundaries are derived by
+ * stepping backwards from the end of the range, so they are anchored to the
+ * range end rather than aligned to wall-clock time.
+ *
+ * `now` is a parameter rather than a call to Date.now() so the fill behaviour,
+ * which deliberately differs for buckets in the future, is reproducible.
+ */
+export function bucketHistory(
+data: EntityCachePoints,
+timeRange: DateRange,
+options: {
+  durationMs: number;
+  fill?: GroupByFill;
+  startWithLast?: boolean;
+  hasDataGenerator?: boolean;
+  now?: number;
+},
+): HistoryBuckets {
+  const ranges = Array.from(timeRange.reverseBy('milliseconds', { step: options.durationMs })).reverse();
+  const buckets: HistoryBuckets = [];
+  ranges.forEach((range, index) => {
+    buckets[index] = { timestamp: range.valueOf(), data: [] };
+  });
+  data.forEach((entry) => {
+    buckets.some((bucket, index) => {
+      if (bucket.timestamp > entry[0] && index > 0) {
+        if (entry[0] >= buckets[index - 1].timestamp) {
+          buckets[index - 1].data.push(entry);
+          return true;
+        }
+      }
+      return false;
+    });
+  });
+  let lastNonNullBucketValue: number | null = null;
+  const now = options.now ?? new Date().getTime();
+  buckets.forEach((bucket, index) => {
+    if (bucket.data.length === 0) {
+      if (options.fill === 'last' && (bucket.timestamp <= now || options.hasDataGenerator)) {
+        bucket.data[0] = [bucket.timestamp, lastNonNullBucketValue];
+      } else if (options.fill === 'zero' && (bucket.timestamp <= now || options.hasDataGenerator)) {
+        bucket.data[0] = [bucket.timestamp, 0];
+      } else if (options.fill === 'null') {
+        bucket.data[0] = [bucket.timestamp, null];
+      }
+    } else {
+      lastNonNullBucketValue = bucket.data.slice(-1)[0][1];
+    }
+    if (options.startWithLast) {
+      if (index > 0) {
+        if (bucket.data.length === 0 || bucket.data[0][0] !== bucket.timestamp) {
+          const prevBucketData = buckets[index - 1].data;
+          bucket.data.unshift([bucket.timestamp, prevBucketData[prevBucketData.length - 1][1]]);
+        }
+      } else {
+        const firstIndexAfter = data.findIndex((entry) => {
+          if (entry[0] > bucket.timestamp) return true;
+          return false;
+        });
+        if (firstIndexAfter > 0) {
+          bucket.data.unshift([bucket.timestamp, data[firstIndexAfter - 1][1]]);
+        }
+      }
+    }
+  });
+  buckets.shift();
+  buckets.pop();
+  // Remove nulls at the end
+  while (
+    buckets.length > 0 &&
+    (buckets[buckets.length - 1].data.length === 0 ||
+      (buckets[buckets.length - 1].data.length === 1 && buckets[buckets.length - 1].data[0][1] === null))
+  ) {
+    buckets.pop();
+  }
+  return buckets;
+}
