@@ -320,7 +320,9 @@ views:
               - **min ≤ avg ≤ max** everywhere, and `raw` is the noisiest line.
               - **first/last** fall within min/max; `median` tracks close to `avg`.
               - **sum/delta/diff** on the counter: `sum` rises monotonically, `delta` and `diff` are small positive bars.
-              - **Trap:** buckets are placed at the *end* of their interval (upstream issue #1055 suspects an offset here). At 1-minute buckets that is invisible, so this card only supports a qualitative check.
+              - No two lines that should differ may lie exactly on top of each other — that is what a mis-wired aggregation dispatch looks like.
+              - **Expected, not a bug:** the shared tooltip does not list `raw` together with the grouped series. ApexCharts only groups series that share an x value, and `raw` carries real state timestamps while the grouped series carry bucket starts. Hover the card below to compare grouped series with each other.
+              - Buckets carry the **start** of their interval and hold [start, start + duration) — verified in `tests/bucketing.test.ts`, which also records that the boundaries are stepped backwards from the range end rather than aligned to wall-clock time.
           - type: custom:apexcharts-card
             graph_span: 15min
             update_interval: 5s
@@ -388,9 +390,9 @@ views:
           - type: markdown
             text_only: true
             content: |-
-              **Check:** how gaps are closed.
-              - **fill: last** holds the previous value (a flat run), **zero** drops to 0, **null** breaks the line.
-              - Clearest on `dev_pv_string_3` at night, when the value is 0.
+              **Check:** how gaps are closed. The three lines must look **different**.
+              - **fill: last** holds the previous value as a flat run, **zero** drops to 0 between readings, **null** breaks the line into isolated segments.
+              - This uses `dev_sparse_power`, which updates every 2 minutes, with 20s buckets — so five of every six buckets are empty. Against the 5s sensors no bucket is ever empty and all three fills render identically, which is a property of the data, not of the card.
               - `fill_raw` in *Extras* does the same for unaggregated data.
           - type: custom:apexcharts-card
             graph_span: 15min
@@ -398,18 +400,18 @@ views:
             header: { show: true, title: 'fill: last / zero / null', show_states: true }
             apex_config: { chart: { height: 240 }, tooltip: { shared: true }, legend: { position: bottom } }
             all_series_config:
-              entity: sensor.dev_pv_string_3
-              group_by: { func: avg, duration: 30s }
+              entity: sensor.dev_sparse_power
+              group_by: { func: avg, duration: 20s }
             series:
               - name: 'fill: last'
-                entity: sensor.dev_pv_string_3
-                group_by: { func: avg, duration: 30s, fill: last }
+                entity: sensor.dev_sparse_power
+                group_by: { func: avg, duration: 20s, fill: last }
               - name: 'fill: zero'
-                entity: sensor.dev_pv_string_3
-                group_by: { func: avg, duration: 30s, fill: zero }
+                entity: sensor.dev_sparse_power
+                group_by: { func: avg, duration: 20s, fill: zero }
               - name: 'fill: null'
-                entity: sensor.dev_pv_string_3
-                group_by: { func: avg, duration: 30s, fill: 'null' }
+                entity: sensor.dev_sparse_power
+                group_by: { func: avg, duration: 20s, fill: 'null' }
 
           - type: heading
             heading: start_with_last

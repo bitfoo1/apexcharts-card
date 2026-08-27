@@ -99,6 +99,25 @@ template:
           {% set bell = [0, sin((minute / 1440 - 0.18) * 2 * pi)] | max %}
           {{ (bell * 260 * (0.85 + range(0, 30) | random / 100)) | round(1) }}
 
+# A deliberately slow sensor, so group_by.fill has something to act on. The 5s
+# sensors above leave no bucket empty at any usable duration, which makes fill:
+# last, zero and null render identically and the gallery card unable to show what
+# it claims. At one update every 2 minutes, a 20s bucket is empty five times out
+# of six.
+  - trigger:
+      - platform: time_pattern
+        minutes: '/2'
+    sensor:
+      - name: Dev Sparse Power
+        unique_id: dev_sparse_power
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        state: >
+          {% set minute = now().hour * 60 + now().minute %}
+          {% set bell = [0, sin((minute / 1440 - 0.22) * 2 * pi)] | max %}
+          {{ (bell * 300 * (0.85 + range(0, 30) | random / 100)) | round(1) }}
+
       - name: Dev PV Power
         unique_id: dev_pv_power
         unit_of_measurement: W
