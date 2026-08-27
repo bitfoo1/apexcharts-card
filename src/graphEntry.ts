@@ -102,23 +102,12 @@ export default class GraphEntry {
     config: ChartCardSeriesConfig,
     span: ChartCardSpanExtConfig | undefined,
   ) {
-    const aggregateFuncMap = {
-      avg: this._average,
-      max: this._maximum,
-      min: this._minimum,
-      first: this._first,
-      last: this._last,
-      sum: this._sum,
-      median: this._median,
-      delta: this._delta,
-      diff: this._diff,
-    };
     this._index = index;
     this._cache = config.statistics ? false : cache;
     this._entityID = config.entity;
     this._graphSpan = graphSpan;
     this._config = config;
-    this._func = aggregateFuncMap[config.group_by.func];
+    this._func = AGGREGATE_FUNCS[config.group_by.func];
     this._realEnd = new Date();
     this._realStart = new Date();
     // Valid because tested during init;
@@ -592,87 +581,119 @@ export default class GraphEntry {
     return buckets;
   }
 
-  private _sum(items: EntityCachePoints): number {
-    if (items.length === 0) return 0;
-    let lastIndex = 0;
-    return items.reduce((sum, entry, index) => {
-      let val = 0;
-      if (entry && entry[1] === null) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        val = items[lastIndex][1]!;
-      } else {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        val = entry[1]!;
-        lastIndex = index;
-      }
-      return sum + val;
-    }, 0);
-  }
-
-  private _average(items: EntityCachePoints): number | null {
-    const nonNull = this._filterNulls(items);
-    if (nonNull.length === 0) return null;
-    return this._sum(nonNull) / nonNull.length;
-  }
-
-  private _minimum(items: EntityCachePoints): number | null {
-    let min: number | null = null;
-    items.forEach((item) => {
-      if (item[1] !== null)
-        if (min === null) min = item[1];
-        else min = Math.min(item[1], min);
-    });
-    return min;
-  }
-
-  private _maximum(items: EntityCachePoints): number | null {
-    let max: number | null = null;
-    items.forEach((item) => {
-      if (item[1] !== null)
-        if (max === null) max = item[1];
-        else max = Math.max(item[1], max);
-    });
-    return max;
-  }
-
-  private _last(items: EntityCachePoints): number | null {
-    if (items.length === 0) return null;
-    return items.slice(-1)[0][1];
-  }
-
-  private _first(items: EntityCachePoints): number | null {
-    if (items.length === 0) return null;
-    return items[0][1];
-  }
-
-  private _median(items: EntityCachePoints) {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const itemsDup = this._filterNulls([...items]).sort((a, b) => a[1]! - b[1]!);
-    if (itemsDup.length === 0) return null;
-    if (itemsDup.length === 1) return itemsDup[0][1];
-    const mid = Math.floor((itemsDup.length - 1) / 2);
-    if (itemsDup.length % 2 === 1) return itemsDup[mid][1];
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return (itemsDup[mid][1]! + itemsDup[mid + 1][1]!) / 2;
-  }
-
-  private _delta(items: EntityCachePoints): number | null {
-    const max = this._maximum(items);
-    const min = this._minimum(items);
-    return max === null || min === null ? null : max - min;
-  }
-
-  private _diff(items: EntityCachePoints): number | null {
-    const noNulls = this._filterNulls(items);
-    const first = this._first(noNulls);
-    const last = this._last(noNulls);
-    if (first === null || last === null) {
-      return null;
-    }
-    return last - first;
-  }
-
-  private _filterNulls(items: EntityCachePoints): EntityCachePoints {
-    return items.filter((item) => item[1] !== null);
-  }
 }
+
+/*
+ * The group_by aggregations, as pure functions.
+ *
+ * They are module level rather than methods because an error here does not throw
+ * — it silently reports a wrong number in a chart, which makes them the part of
+ * this file most worth testing in isolation. Keeping them free of `this` also
+ * removes a subtlety of the previous shape: the constructor put unbound method
+ * references into its dispatch map, so they only worked because the result was
+ * stored on and invoked through the instance.
+ */
+
+/** Drops points whose value is null, which every aggregation but sum ignores. */
+export function filterNulls(items: EntityCachePoints): EntityCachePoints {
+  return items.filter((item) => item[1] !== null);
+}
+
+/**
+ * Sums the bucket, carrying the last seen value forward across nulls so a gap in
+ * the middle of a counter series does not depress the total.
+ */
+export function aggregateSum(items: EntityCachePoints): number {
+  if (items.length === 0) return 0;
+  let lastIndex = 0;
+  return items.reduce((sum, entry, index) => {
+    let val = 0;
+    if (entry && entry[1] === null) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      val = items[lastIndex][1]!;
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      val = entry[1]!;
+      lastIndex = index;
+    }
+    return sum + val;
+  }, 0);
+}
+
+export function aggregateAverage(items: EntityCachePoints): number | null {
+  const nonNull = filterNulls(items);
+  if (nonNull.length === 0) return null;
+  return aggregateSum(nonNull) / nonNull.length;
+}
+
+export function aggregateMinimum(items: EntityCachePoints): number | null {
+  let min: number | null = null;
+  items.forEach((item) => {
+    if (item[1] !== null)
+      if (min === null) min = item[1];
+      else min = Math.min(item[1], min);
+  });
+  return min;
+}
+
+export function aggregateMaximum(items: EntityCachePoints): number | null {
+  let max: number | null = null;
+  items.forEach((item) => {
+    if (item[1] !== null)
+      if (max === null) max = item[1];
+      else max = Math.max(item[1], max);
+  });
+  return max;
+}
+
+/** Last point as recorded, including a null: "last" is about position, not value. */
+export function aggregateLast(items: EntityCachePoints): number | null {
+  if (items.length === 0) return null;
+  return items.slice(-1)[0][1];
+}
+
+export function aggregateFirst(items: EntityCachePoints): number | null {
+  if (items.length === 0) return null;
+  return items[0][1];
+}
+
+export function aggregateMedian(items: EntityCachePoints): number | null {
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const itemsDup = filterNulls([...items]).sort((a, b) => a[1]! - b[1]!);
+  if (itemsDup.length === 0) return null;
+  if (itemsDup.length === 1) return itemsDup[0][1];
+  const mid = Math.floor((itemsDup.length - 1) / 2);
+  if (itemsDup.length % 2 === 1) return itemsDup[mid][1];
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  return (itemsDup[mid][1]! + itemsDup[mid + 1][1]!) / 2;
+}
+
+/** Spread within the bucket. */
+export function aggregateDelta(items: EntityCachePoints): number | null {
+  const max = aggregateMaximum(items);
+  const min = aggregateMinimum(items);
+  return max === null || min === null ? null : max - min;
+}
+
+/** Net change across the bucket, which unlike delta can be negative. */
+export function aggregateDiff(items: EntityCachePoints): number | null {
+  const noNulls = filterNulls(items);
+  const first = aggregateFirst(noNulls);
+  const last = aggregateLast(noNulls);
+  if (first === null || last === null) {
+    return null;
+  }
+  return last - first;
+}
+
+export const AGGREGATE_FUNCS = {
+  avg: aggregateAverage,
+  max: aggregateMaximum,
+  min: aggregateMinimum,
+  first: aggregateFirst,
+  last: aggregateLast,
+  sum: aggregateSum,
+  median: aggregateMedian,
+  delta: aggregateDelta,
+  diff: aggregateDiff,
+};
