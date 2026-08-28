@@ -393,6 +393,7 @@ views:
               **Check:** how gaps are closed. The three lines must look **different**.
               - **fill: last** holds the previous value as a flat run, **zero** drops to 0 between readings, **null** breaks the line into isolated segments.
               - This uses `dev_sparse_power`, which updates every 2 minutes, with 20s buckets — so five of every six buckets are empty. Against the 5s sensors no bucket is ever empty and all three fills render identically, which is a property of the data, not of the card.
+              - **The shared tooltip lists two values at most positions, not three** — that is correct. `fill: null` has no value in an empty bucket, so it is absent from the tooltip there; all three appear only on the every-sixth bucket that holds a real reading. At the far **left** edge only `zero` appears, because the card trims leading nulls from line series and `last` has nothing to carry forward yet. Measured over a 15-minute span: 3 positions with one value, 34 with two, 7 with three.
               - `fill_raw` in *Extras* does the same for unaggregated data.
           - type: custom:apexcharts-card
             graph_span: 15min
@@ -771,10 +772,13 @@ views:
               **Check:** hide the **first** legend entry ("forecast"), then the others.
               - The **y-axis on the left must stay** with its labels and its "W" title, and must rescale to the remaining series.
               - Hide *every* series and the axis may vanish — that is intended.
+              - The forecast is an area across the whole day and peaks well above the strings, so hiding it must visibly shrink the axis maximum. All four series are in watts; if the forecast reads ~10 instead, it is being plotted from the entity state (a daily kWh total) rather than from its `detailedForecast` attribute.
               - **Why this card exists:** upstream bug #1031, fixed in this fork. The card emits one ApexCharts y-axis entry per series and marks only the first one visible; ApexCharts drops an axis once all series mapped to it are collapsed, which with that 1:1 mapping meant hiding series 1 dropped the only visible axis. The shape mirrors the production "PV per string + forecast" card, where the forecast is the first series and the one users click away.
           - type: custom:apexcharts-card
-            graph_span: 15min
-            update_interval: 5s
+            graph_span: 24h
+            span: { start: day }
+            now: { show: true, label: now }
+            update_interval: 30s
             header: { show: true, title: '#1031 (hide the first series)' }
             yaxis:
               - min: 0
@@ -788,6 +792,16 @@ views:
                 name: forecast
                 type: area
                 opacity: 0.1
+                stroke_width: 1
+                unit: W
+                # The entity's own state is a constant daily total in kWh, so
+                # plotting it directly draws a flat line near zero on a watt
+                # axis. The half-hourly curve lives in the attribute, which is
+                # also how the production Solcast card reads it.
+                data_generator: |
+                  return entity.attributes.detailedForecast.map((e) => {
+                    return [new Date(e.period_start).getTime(), e.pv_estimate * 1000];
+                  });
               - entity: sensor.dev_pv_string_1
                 name: string 1
               - entity: sensor.dev_pv_string_2
