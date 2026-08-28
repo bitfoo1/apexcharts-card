@@ -153,7 +153,57 @@ This is the most common task. The established pattern:
 7. Reject a PR that removes a guard or changes semantics with no reproduction
    case, and write down why.
 
-## Commit conventions
+## Fixing a bug
+
+**Reproduce before you fix.** A fix without a prior reproduction is a guess, and
+this card makes guessing cheap and expensive: nothing throws, the chart simply
+renders a wrong picture.
+
+1. Build the failing case first. If the bug is testable without a browser, write
+   the test and watch it fail; if it needs a browser, add a card to the dev
+   gallery that exhibits it. Do not touch `src/` until you have seen the bug.
+2. If the bug already reproduces somewhere, **show the developer where** before
+   changing anything — exact dashboard path, exact card name, exact interaction
+   (see *Reporting to the developer*). They may know a constraint you do not.
+3. Fix it, then confirm the same case now passes.
+4. Verify the test has teeth: revert the fix, watch it fail again, restore it. A
+   test written after the code frequently asserts what the code happens to do.
+   Mutating the fix is the only evidence that it would catch a regression.
+5. State the root cause in terms of the mechanism, citing the code or library
+   source you read. "Probably a timing issue" is not a diagnosis.
+
+Two failures of this discipline already cost real time here, both recorded in the
+notes: reasoning about tooltip padding instead of measuring it, and concluding a
+y-axis fix did not work when the browser was serving a month-old cached bundle.
+
+## Reporting to the developer
+
+**Always address a card by its exact location and exact name.** "The forecast
+card" is not actionable — there are several. Give the dashboard path, the view,
+and the card's header title verbatim:
+
+> <http://127.0.0.1:8124/lovelace/charts> → view **Header & legend** → card
+> **"#1031 (hide the first series)"**
+
+For production dashboards, the same applies with the real path and, when the card
+has no title, its position (`views[0].sections[1].cards[6]`).
+
+**Close every piece of work with a summary** covering:
+
+1. **What was done** — the change, and the commit it landed in.
+2. **Before and after** — what the behaviour was, what it is now. Not the diff;
+   the observable difference.
+3. **How to see it.** For anything touching the UI or a card: the exact path and
+   card name as above, the interaction to perform, and what correct looks like —
+   including what is *expected but might look wrong*. Mention a required hard
+   reload when `dist/` changed but the resource URL did not.
+4. **For purely internal work** (refactor, tests, tooling), state the concrete
+   outcome instead: what is now guaranteed, what regression class is now caught,
+   what stays unverified. Never invent a visual check for a change that has none.
+
+Anything you could not verify belongs in the summary too, named as such.
+
+
 
 Conventional commits with a gitmoji:
 
