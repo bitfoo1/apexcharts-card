@@ -16,6 +16,40 @@ import { layoutMinimal } from './layouts/minimal';
 import { getLocales, getDefaultLocale } from './locales';
 import GraphEntry from './graphEntry';
 
+/**
+ * The y-axis defaults a layout variant declares, if any.
+ *
+ * Exposed because they have to be folded into the generated per-series array at
+ * config time rather than during option assembly: `_updateData` pushes
+ * `apex_config.yaxis` back into `updateOptions` on every refresh, so anything
+ * applied only while building the initial options is undone by the first update.
+ */
+export function getLayoutYAxisDefaults(layout: string | undefined): Record<string, unknown> | undefined {
+  if (layout !== 'minimal') return undefined;
+  return layoutMinimal.yaxis as unknown as Record<string, unknown>;
+}
+
+/**
+ * Folds a layout variant's y-axis defaults into the generated per-series array.
+ *
+ * `layoutMinimal.yaxis` is a single object while the card generates one entry per
+ * series. Letting `mergeDeep` reconcile the two shapes discarded one of them —
+ * an array replaces an object wholesale, so the variant's settings were dropped
+ * and a `layout: minimal` card still rendered a y-axis, whose bottom label then
+ * escaped the card because `ha-card` is `overflow: visible`.
+ *
+ * The layout wins over the generated values for the keys it declares, because a
+ * layout variant is a deliberate presentation choice — `minimal` means no axis —
+ * and `_generateYAxisConfig` always emits an explicit `show`, which would
+ * otherwise re-enable the axis the variant set out to remove.
+ */
+export function foldLayoutYAxis(
+  layoutYAxis: Record<string, unknown>,
+  generated: ApexCharts.ApexYAxis[],
+): ApexCharts.ApexYAxis[] {
+  return generated.map((entry) => mergeDeep({ ...entry }, layoutYAxis));
+}
+
 export function getLayoutConfig(
   config: ChartCardConfig,
   hass: HomeAssistant | undefined = undefined,

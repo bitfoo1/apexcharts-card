@@ -770,10 +770,11 @@ views:
             text_only: true
             content: |-
               **Check:** hide the **first** legend entry ("forecast"), then the others.
-              - The **y-axis on the left must stay** with its labels and its "W" title, and must rescale to the remaining series.
+              - The **y-axis on the left must stay**, with its labels and its "W" title. That is the whole point of this card.
+              - **The maximum does not shrink, and that is not a bug here:** with `yaxis` configured on the card, `_computeYAxisAutoMinMax` derives min/max from every series mapped to that axis and writes them into the axis config, irrespective of what the legend shows. ApexCharts never gets the chance to rescale.
               - Hide *every* series and the axis may vanish — that is intended.
-              - The forecast is an area across the whole day and peaks well above the strings, so hiding it must visibly shrink the axis maximum. All four series are in watts; if the forecast reads ~10 instead, it is being plotted from the entity state (a daily kWh total) rather than from its `detailedForecast` attribute.
-              - **Why this card exists:** upstream bug #1031, fixed in this fork. The card emits one ApexCharts y-axis entry per series and marks only the first one visible; ApexCharts drops an axis once all series mapped to it are collapsed, which with that 1:1 mapping meant hiding series 1 dropped the only visible axis. The shape mirrors the production "PV per string + forecast" card, where the forecast is the first series and the one users click away.
+              - All four series are in watts; if the forecast reads ~10 instead, it is being plotted from the entity state (a daily kWh total) rather than from its `detailedForecast` attribute.
+              - **Why this card exists:** upstream bug #1031, fixed in this fork. The card emits one ApexCharts y-axis entry per series and marks only the first one visible; ApexCharts drops an axis once all series mapped to it are collapsed, which with that 1:1 mapping meant hiding series 1 dropped the only visible axis. Verified in a browser: after the click the series sits in `ancillaryCollapsedSeriesIndices` rather than `collapsedSeriesIndices`, so `ignoreYAxisIndexes` stays empty and the axis survives. The shape mirrors the production "PV per string + forecast" card, where the forecast is the first series and the one users click away.
           - type: custom:apexcharts-card
             graph_span: 24h
             span: { start: day }

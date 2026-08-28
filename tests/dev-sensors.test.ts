@@ -26,11 +26,16 @@ const WINDOW_MINUTES = 4;
 const EXPECTED: { entity: string; minPerMinute: number; why: string }[] = [
   { entity: 'sensor.dev_pv_power', minPerMinute: 4, why: 'aggregation cards group it at 1min' },
   { entity: 'sensor.dev_pv_string_1', minPerMinute: 4, why: 'group_by cards and the legend cards use it' },
-  // No noise term, so its value changes only when the minute does and the
-  // recorder stores one point per minute however often the trigger fires. One
-  // per minute is therefore its correct density, not a defect.
-  { entity: 'sensor.dev_battery_soc', minPerMinute: 1, why: 'smooth curve, one change per minute' },
 ];
+
+/*
+ * Deliberately not asserted: sensor.dev_battery_soc. It carries no noise term, so
+ * its value follows a plain sine of the current minute — and near that curve's
+ * extremes the rounded value stays put for a minute or two, which the recorder
+ * stores as nothing at all. A per-minute density assertion on it therefore passes
+ * or fails depending on the time of day, which is how this file first went red.
+ * The sensors above are noisy on every tick, so their density is a real contract.
+ */
 
 /** The fill card needs the opposite: a sensor sparse enough to leave buckets empty. */
 const SPARSE = { entity: 'sensor.dev_sparse_power', maxPerMinute: 1 };

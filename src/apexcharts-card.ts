@@ -44,7 +44,13 @@ import ApexCharts from 'apexcharts';
 import { Ripple } from '@material/mwc-ripple';
 import { stylesApex } from './styles';
 import { HassEntity } from 'home-assistant-js-websocket';
-import { getBrushLayoutConfig, getLayoutConfig, keepSharedYAxisVisible } from './apex-layouts';
+import {
+  foldLayoutYAxis,
+  getBrushLayoutConfig,
+  getLayoutConfig,
+  getLayoutYAxisDefaults,
+  keepSharedYAxisVisible,
+} from './apex-layouts';
 import GraphEntry from './graphEntry';
 import { createCheckers } from 'ts-interface-checker';
 import {
@@ -570,7 +576,8 @@ class ChartsCard extends LitElement {
       return yAxisDup;
     });
     keepSharedYAxisVisible(yaxisConfig, axisIndexPerEntry);
-    return yaxisConfig;
+    const layoutYAxis = getLayoutYAxisDefaults(config.layout);
+    return layoutYAxis ? foldLayoutYAxis(layoutYAxis, yaxisConfig) : yaxisConfig;
   }
 
   static get styles(): CSSResultGroup {

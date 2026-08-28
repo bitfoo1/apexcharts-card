@@ -50,7 +50,7 @@ lovelace:
     # bundle. Home Assistant serves /local with `max-age=2678400`, so a browser
     # keeps a stale bundle for a month across rebuilds — bump the query string
     # (or hard-reload) whenever the card seems to ignore a source change.
-    - url: /local/apexcharts-card.js?v=2
+    - url: /local/apexcharts-card.js?v=4
       type: module
   dashboards:
     lovelace:
