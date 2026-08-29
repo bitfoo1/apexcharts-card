@@ -61,7 +61,7 @@ using them is the expected loop:
 | Stage | Command | Use it for |
 | --- | --- | --- |
 | Mock harness | `mise run dev` → <http://localhost:5050> | CSS, layout, markup. Instant, deterministic, no Home Assistant. Errors and card logging appear in a panel on the page. |
-| Real Home Assistant | `mise run dev:ha` → <http://127.0.0.1:8124/lovelace/charts> | End-to-end before a release: real frontend, real recorder, real theming. `dist/` is mounted as `/config/www`, so a rebuild plus browser reload is the whole loop. Login `dev` / `dev`, though `trusted_networks` auto-login usually makes that unnecessary. Its dashboard is a 58-card gallery of every documented option — use it to check a change against the whole surface, and extend it when you add or fix a feature. |
+| Real Home Assistant | `mise run dev:ha` → <http://127.0.0.1:8124/lovelace/types> | End-to-end before a release: real frontend, real recorder, real theming. `dist/` is mounted as `/config/www`, so a rebuild plus browser reload is the whole loop. Login `dev` / `dev`, though `trusted_networks` auto-login usually makes that unnecessary. Its dashboard is a 58-card gallery of every documented option — use it to check a change against the whole surface, and extend it when you add or fix a feature. Each view has its own path (`types`, `aggregation`, `statistics`, `time`, `header`, `axes`, `extras`, `brush`, `integration`); an unknown one silently renders the first view instead of failing. |
 | Tooltip metrics | `mise run tooltip:preview [git-ref...]` | Anything about rendered size — prints measured pixels and writes a screenshot. |
 
 Notes that cost time to rediscover:
@@ -182,7 +182,7 @@ y-axis fix did not work when the browser was serving a month-old cached bundle.
 card" is not actionable — there are several. Give the dashboard path, the view,
 and the card's header title verbatim:
 
-> <http://127.0.0.1:8124/lovelace/charts> → view **Header & legend** → card
+> <http://127.0.0.1:8124/lovelace/header> → view **Header & legend** → card
 > **"#1031 (hide the first series)"**
 
 For production dashboards, the same applies with the real path and, when the card

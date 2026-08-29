@@ -1239,7 +1239,11 @@ mise run dev:ha:down  # stop it, keeping its config directory
 mise run dev:ha:reset # stop it and clear the config directory, for a clean instance
 ```
 
-Then open <http://127.0.0.1:8124/lovelace/charts>. `dist/` is mounted read-only
+Then open <http://127.0.0.1:8124/lovelace/types>. Each view has a path of its own —
+`types`, `aggregation`, `statistics`, `time`, `header`, `axes`, `extras`, `brush`,
+`integration` — and an unknown path such as `/lovelace/charts` does **not** fail
+but silently shows the first view, which makes a mistyped URL look like a missing
+card. `dist/` is mounted read-only
 as `/config/www`, so the dashboard loads `/local/apexcharts-card.js` — the build
 you just made. Rebuild, reload the browser, done.
 
