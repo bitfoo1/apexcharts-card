@@ -118,7 +118,7 @@ views:
               **Check:** the fill and the bars.
               - **area:** filled below the line, semi-transparent (opacity 0.3).
               - **column:** bars with a gap, not overlapping, aligned to the bucket boundaries on the time axis.
-              - **mixed:** bars *and* a line in one chart; the shared tooltip lists both values.
+              - **mixed:** bars *and* a line in one chart. Its tooltip lists **one** series, not both, and that is an ApexCharts constraint rather than a card defect — see the `fill` card's note under *Aggregation*. Here the column series is grouped into 1-minute buckets while the line is raw history, so their point counts differ (measured 15 against 182).
           - type: custom:apexcharts-card
             graph_span: 15min
             update_interval: 5s
@@ -393,7 +393,8 @@ views:
               **Check:** how gaps are closed. The three lines must look **different**.
               - **fill: last** holds the previous value as a flat run, **zero** drops to 0 between readings, **null** breaks the line into isolated segments.
               - This uses `dev_sparse_power`, which updates every 2 minutes, with 20s buckets — so five of every six buckets are empty. Against the 5s sensors no bucket is ever empty and all three fills render identically, which is a property of the data, not of the card.
-              - **The shared tooltip lists two values at most positions, not three** — that is correct. `fill: null` has no value in an empty bucket, so it is absent from the tooltip there; all three appear only on the every-sixth bucket that holds a real reading. At the far **left** edge only `zero` appears, because the card trims leading nulls from line series and `last` has nothing to carry forward yet. Measured over a 15-minute span: 3 positions with one value, 34 with two, 7 with three.
+              - **The tooltip lists only one series here, and that is not a card defect.** ApexCharts builds a shared tooltip only while `isInitialSeriesSameLen()` holds — every non-collapsed series must carry the *same number of points* — and otherwise silently creates a single-series tooltip. The `null` fill is shorter because the card trims leading nulls from a line series, and `last` cannot start before its first real reading. Measured here: point counts 43 / 46 / 38, and 10 of 12 sampled x positions showed exactly one row. Hover **first / last / median** below for the contrast: equal counts (16 / 16 / 16), three rows at 11 of 12 positions.
+              - **The rule this generalises to:** a shared tooltip needs every series aggregated onto the same grid. Raw history from two entities does not qualify, because the recorder stores a different number of points per entity — which is why *Chart types* → **stacked area** and **color_list + locale en + hours_12** show one row as well.
               - `fill_raw` in *Extras* does the same for unaggregated data.
           - type: custom:apexcharts-card
             graph_span: 15min
@@ -734,7 +735,8 @@ views:
               **Check:** what the legend contains.
               - **legend_value: false:** name without a value. **in_legend: false:** the series is missing from the legend but present in the chart.
               - **hidden_by_default:** one series starts hidden (dimmed legend entry); clicking it reveals the series.
-              - **Trap:** after hiding or showing a series the **shared tooltip must still list every visible series** — that was the ApexCharts 5 bug this fork upgraded to 6 for (#1097). And the **y-axis must not disappear** when the *first* series is hidden (open upstream bug #1031).
+              - **Trap:** the **y-axis must not disappear** when the *first* series is hidden (open upstream bug #1031).
+              - **Not checkable on these cards:** the ApexCharts 5 tooltip bug this fork upgraded to 6 for (#1097) — a shared tooltip breaking after a legend click. Both cards here plot raw history from different entities, whose point counts differ (measured 175 / 177 and 175 / 0), and ApexCharts then serves a single-series tooltip whatever the legend does. Check it on **in_header: raw / before_now / after_now** above, whose three series are grouped onto the same buckets (16 / 16 / 16): hide one, and the remaining two must still appear together.
           - type: custom:apexcharts-card
             graph_span: 15min
             update_interval: 5s

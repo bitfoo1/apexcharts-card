@@ -42,6 +42,11 @@ brings, without any configuration change:
   single series (upstream issue
   [#1097](https://github.com/RomRider/apexcharts-card/issues/1097),
   [apexcharts.js#5225](https://github.com/apexcharts/apexcharts.js/issues/5225)).
+  Note the precondition, which is ApexCharts' own and holds in 5 and 6 alike: a
+  shared tooltip requires every visible series to carry the *same number of
+  points*. Raw history from two entities does not qualify, because the recorder
+  stores a different number of points per entity — aggregate them onto the same
+  buckets with `group_by` if you want one tooltip listing all of them.
 - Coherent animation when the number of data points changes, instead of points
   popping in and out. Disable with `apex_config.chart.animations.dynamicAnimation.enabled: false`.
 - Two-finger pinch zoom and pan on touch devices, with axis rails so a vertical
