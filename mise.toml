@@ -96,6 +96,33 @@ description = "Stop the container and clear its config directory, for a clean in
 # mount, so the database, .storage and the logs survive it.
 run = 'npm run dev:ha:reset'
 
+[tasks.'mcp:playwright:browsers']
+# The Playwright MCP server (see .kiro/settings/mcp.json) ships playwright-core
+# but no browser, and it exposes no install tool — a browser_navigate simply
+# hangs until one exists. The browser build is pinned to the Playwright version
+# inside @playwright/mcp, so this reads that version instead of hardcoding it:
+# a mismatched `playwright install` downloads a revision the server won't use.
+#
+# Firefox, to match `mise run tooltip:preview`. It has to be Playwright's own
+# Firefox build, not /Applications/Firefox.app: Playwright drives Firefox over
+# the Juggler protocol, which only exists in its patched build. Launching the
+# system binary with --executable-path was tried and it exits immediately on
+# the unknown `-juggler-pipe` argument.
+description = "Install the Firefox build the Playwright MCP server needs"
+run = '''
+set -euo pipefail
+spec="npm:@playwright/mcp@0.0.79"
+root="$(mise where "$spec")"
+version="$(node -e '
+  const fs = require("fs");
+  const path = require("path");
+  const pkg = path.join(process.argv[1], "node_modules/@playwright/mcp/package.json");
+  process.stdout.write(JSON.parse(fs.readFileSync(pkg, "utf8")).dependencies["playwright"]);
+' "$root")"
+echo "Playwright MCP $spec uses playwright $version"
+mise exec "npm:playwright@$version" -- playwright install firefox
+'''
+
 [tasks.'dev:dashboard:check']
 description = "Validate every dev-dashboard card with the card's own config checker"
 run = 'npm run dev:dashboard:check'

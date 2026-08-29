@@ -9,3 +9,7 @@
 dev/docker/config/*
 !dev/docker/config/configuration.yaml
 !dev/docker/config/ui-lovelace.yaml
+
+# Playwright MCP writes snapshots and traces here, into whatever directory the
+# MCP client was started from — which is the repository root.
+.playwright-mcp/
