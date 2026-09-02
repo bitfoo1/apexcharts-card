@@ -58,7 +58,13 @@ Newly available through `apex_config`: `chart.animations.easing` (named curve,
 cubic-bezier array or function), `dataLabels.offsetX`/`offsetY` as functions,
 rounded corners and slice spacing on pie/donut.
 
-Two caveats. The bundle grows from 1.63 MB to 2.01 MB. And ApexCharts 6 gates
+Two caveats. The bundle grows from 1.63 MB to 1.89 MB — v6 is bigger than v5, and
+this fork imports it per entry point (`apexcharts/core` plus the seven chart types
+the card can produce and five features) instead of the complete build, which
+recovers 112 KB of that. A chart type or feature that is not imported cannot be
+reached through `apex_config` either, so the imports deliberately include the
+toolbar, the exporter and keyboard navigation, which the card never enables itself.
+And ApexCharts 6 gates
 seven interactive features (`storyboard`, `link`, `ink`, `measure`,
 `contextMenu`, `perspectives`, `history`) plus the `unit` chart type behind a
 paid plan: they are present and will work if you enable them via `apex_config`,

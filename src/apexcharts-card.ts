@@ -40,7 +40,33 @@ import {
   isUsingServerTimezone,
   computeTimezoneDiffWithLocal,
 } from './utils';
-import ApexCharts from 'apexcharts';
+/*
+ * ApexCharts is imported per entry point rather than as the complete build,
+ * because the complete build is roughly half the bundle and carries every chart
+ * type and feature the library has — violin, candlestick, treemap, sunburst,
+ * drilldown, crossfilter and the premium ones — none of which this card can
+ * produce.
+ *
+ * What is imported is deliberately wider than the card's own defaults: the
+ * README promises `apex_config` is a 1:1 mapping of the ApexCharts API, so a
+ * feature a user can plausibly switch on from YAML has to be present. Hence the
+ * toolbar, the exporter and keyboard navigation, none of which the card enables
+ * itself. Adding a chart type to `ChartCardChartType` or a series type means
+ * adding its entry point here, otherwise the chart silently fails to render.
+ */
+import ApexCharts from 'apexcharts/core';
+import 'apexcharts/line';
+import 'apexcharts/area';
+import 'apexcharts/column';
+import 'apexcharts/scatter';
+import 'apexcharts/pie';
+import 'apexcharts/donut';
+import 'apexcharts/radialBar';
+import 'apexcharts/features/legend';
+import 'apexcharts/features/annotations';
+import 'apexcharts/features/toolbar';
+import 'apexcharts/features/exports';
+import 'apexcharts/features/keyboard';
 import { Ripple } from '@material/mwc-ripple';
 import { stylesApex } from './styles';
 import { HassEntity } from 'home-assistant-js-websocket';
