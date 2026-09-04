@@ -74,10 +74,6 @@ description = "Render and measure the tooltip in headless Firefox (optionally ag
 usage = 'arg "[refs]" var=#true help="git refs to render alongside the working tree"'
 run = 'node scripts/tooltip-preview.mjs $usage_refs'
 
-[tasks.dev]
-description = "Mock harness: rebuild on change and serve http://localhost:5050 (no Home Assistant)"
-run = "npm run watch"
-
 [tasks.'dev:ha']
 description = "Start the local Home Assistant container and finish its onboarding"
 run = 'npm run dev:ha'

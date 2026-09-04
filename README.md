@@ -1214,31 +1214,9 @@ Without mise, the equivalent npm scripts are `npm ci`, `npm run verify`,
 
 ### Testing a change without cutting a release <!-- omit in toc -->
 
-Two stages, deliberately separate. Neither needs a release, a HACS download or
-your production Home Assistant.
-
-**Stage 1 — mock harness, for CSS and layout work.** Starts instantly, no Home
-Assistant involved:
-
-```bash
-mise run dev          # rebuilds on change, serves http://localhost:5050
-```
-
-`dev/index.html` renders several card configurations against `dev/mock-hass.js`,
-which fakes the small surface the card actually uses — `hass.states`,
-`hass.language`, `hass.locale`, `hass.config.time_zone`, the history REST call
-and the `recorder/statistics_during_period` WebSocket command — plus a
-`<ha-card>` stand-in. The mock data is deterministic, so a reload shows the same
-curve and a visual change is attributable to your edit. Page errors and the
-card's own logging are mirrored into a panel on the page, because the harness is
-often driven headlessly. Port 5050, not 5000: on macOS that port belongs to
-Control Center's AirPlay Receiver, which answers 403.
-
-Every case runs with `cache: false` — the card otherwise caches history in
-IndexedDB and keeps serving the previous data after a reload.
-
-**Stage 2 — a real Home Assistant in Docker, before releasing.** Same image
-version as production, so a difference in behaviour points at the card:
+No release, no HACS download and no access to your production Home Assistant is
+needed: a real Home Assistant runs in Docker on the same image version as
+production, so a difference in behaviour points at the card.
 
 ```bash
 mise run dev:ha       # start the container and finish onboarding

@@ -33,7 +33,6 @@ rewriting 30 upstream lines — see `eslint.config.mjs` for that pattern.
 | `src/types-config.ts` | The user-facing YAML config types. **Generated companion:** `src/types-config-ti.ts` via `npm run build:types-check` — never edit it by hand. |
 | `src/utils.ts`, `src/const.ts`, `src/locales.ts`, `src/styles.ts` | Helpers, defaults, ApexCharts locales, CSS. |
 | `tests/` | Vitest unit tests. |
-| `dev/` | Local dev harness: `index.html` plus `mock-hass.js`, served by `mise run dev`. No Home Assistant needed. |
 | `dev/docker/` | A throwaway Home Assistant instance (`mise run dev:ha`) that mounts `dist/` as `/config/www`. `config/` is a live HA config directory; only `configuration.yaml` and `ui-lovelace.yaml` are tracked. |
 | `scripts/` | `css-diff.mjs` (stylesheet drift vs the bundled ApexCharts), `tooltip-preview.mjs` (measure the tooltip in a browser), `update_readme.sh` (used by semantic-release). |
 | `test/` | **Not tests.** A Home Assistant dev instance config (`configuration.yaml`, `ui-lovelace.yaml`) inherited from upstream. Superseded by `dev/docker/`. |
@@ -55,22 +54,21 @@ Individual steps: `mise run typecheck`, `mise run lint`, `mise run test`,
 
 ### Verifying a change without cutting a release
 
-Never publish a release to test something — there are two local stages, and
-using them is the expected loop:
+Never publish a release to test something — verify locally, which is the expected
+loop:
 
 | Stage | Command | Use it for |
 | --- | --- | --- |
-| Mock harness | `mise run dev` → <http://localhost:5050> | CSS, layout, markup. Instant, deterministic, no Home Assistant. Errors and card logging appear in a panel on the page. |
 | Real Home Assistant | `mise run dev:ha` → <http://127.0.0.1:8124/lovelace/types> | End-to-end before a release: real frontend, real recorder, real theming. `dist/` is mounted as `/config/www`, so a rebuild plus browser reload is the whole loop. Login `dev` / `dev`, though `trusted_networks` auto-login usually makes that unnecessary. Its dashboard is a 58-card gallery of every documented option — use it to check a change against the whole surface, and extend it when you add or fix a feature. Each view has its own path (`types`, `aggregation`, `statistics`, `time`, `header`, `axes`, `extras`, `brush`, `integration`); an unknown one silently renders the first view instead of failing. |
 | Tooltip metrics | `mise run tooltip:preview [git-ref...]` | Anything about rendered size — prints measured pixels and writes a screenshot. |
 
 Notes that cost time to rediscover:
 
-- The harness sets `cache: false` on every case. The card caches history in
-  IndexedDB, which serves stale data after a reload, and in a headless browser
-  profile that read never resolves — the card then sits at `Loading...` forever.
-  Only the statistics path is unaffected, because the card disables its own cache
-  there (`graphEntry.ts`).
+- `cache: false` is worth setting on a card under investigation. The card caches
+  history in IndexedDB, which serves stale data after a reload, and in a fresh
+  headless browser profile that read never resolves — the card then sits at
+  `Loading...` forever. Only the statistics path is unaffected, because the card
+  disables its own cache there (`graphEntry.ts`).
 - The dev container's dashboard uses `graph_span: 15min` because a fresh instance
   has no history; its synthetic sensors update every five seconds. Statistics
   cards need ~15 minutes of runtime before 5-minute buckets exist.
@@ -83,8 +81,19 @@ Notes that cost time to rediscover:
   requires `dev:ha:reset` afterwards, because the account is already in
   `.storage`. They are acceptable only because the container is published on
   127.0.0.1 with synthetic data — never carry that pattern anywhere else.
-- Headless Firefox can screenshot the harness but **not** the Home Assistant SPA
-  — for stage 2, look at it in a real browser.
+- Anything about rendering is verified through the Playwright MCP server, which
+  drives the Home Assistant SPA itself — `firefox --headless --screenshot` cannot,
+  because it captures before `await chart.render()` resolves. Install its browser
+  once with `mise run mcp:playwright:browsers`. Five things that cost time: the
+  gallery re-renders every five seconds and wipes any attribute a probe set, so
+  address elements by a stable index; the legend is a `foreignObject` spanning the
+  whole chart with `pointer-events: auto`, so Playwright refuses to hover the plot
+  and `page.mouse.move` with coordinates is the way in; a synthetic `MouseEvent`
+  does not toggle the ApexCharts legend, only a real click does; card internals
+  (`_config`, `_apexChart.w.globals`, even `_getSpanDates()`) are reachable from
+  the element and are usually a better assertion than a screenshot; and card
+  elements live in nested shadow roots, so a walker that descends `shadowRoot` is
+  needed to find them at all.
 - `dev/docker/config` is a live Home Assistant config directory. Only
   `configuration.yaml` and `ui-lovelace.yaml` are tracked.
 - `mise run dev:dashboard:check` validates every dev-dashboard card against the
