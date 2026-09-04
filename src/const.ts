@@ -1,15 +1,18 @@
-import Moment from 'moment-timezone';
+import Moment from 'moment';
 import { extendMoment } from 'moment-range';
 import momentDurationFormatSetup from 'moment-duration-format';
 
 /*
  * The two casts bridge a types-only mismatch: both libraries declare their
- * parameter as `typeof import('moment')` (a namespace object), while
- * moment-timezone exports a callable default. Under moduleResolution: bundler
- * TypeScript no longer conflates the two. Runtime behaviour is unchanged —
- * moment-timezone IS the moment instance being extended here, which is the
- * whole point of passing it. Casting via Parameters<> keeps this correct if
- * either library changes its signature.
+ * parameter as `typeof import('moment')` (a namespace object), while moment
+ * exports a callable default. Under moduleResolution: bundler TypeScript no
+ * longer conflates the two. Runtime behaviour is unchanged — the callable IS the
+ * moment instance being extended here, which is the whole point of passing it.
+ * Casting via Parameters<> keeps this correct if either library changes its
+ * signature.
+ *
+ * Plain moment, not moment-timezone: its zone database was 696 KB of the bundle,
+ * and `src/utils.ts` derives the two offsets the card needs from `Intl` instead.
  */
 momentDurationFormatSetup(Moment as unknown as Parameters<typeof momentDurationFormatSetup>[0]);
 export const moment = extendMoment(Moment as unknown as Parameters<typeof extendMoment>[0]);

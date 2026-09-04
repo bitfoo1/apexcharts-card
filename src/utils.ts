@@ -3,7 +3,12 @@ import { compress as lzStringCompress, decompress as lzStringDecompress } from '
 import { ChartCardConfig, EntityCachePoints } from './types';
 import { TinyColor } from '@ctrl/tinycolor';
 import parse from 'parse-duration';
-import { ChartCardExternalConfig, ChartCardPrettyTime, ChartCardSeriesExternalConfig } from './types-config';
+import {
+  ChartCardExternalConfig,
+  ChartCardPrettyTime,
+  ChartCardSeriesExternalConfig,
+  ChartCardStartEnd,
+} from './types-config';
 import { DEFAULT_FLOAT_PRECISION, DEFAULT_MAX, DEFAULT_MIN, moment, NO_VALUE } from './const';
 import { formatNumber, FrontendLocaleData, HomeAssistant } from 'custom-card-helpers';
 import { OverrideFrontendLocaleData } from './types-ha';
@@ -327,9 +332,212 @@ export function myFormatNumber(
   });
 }
 
-export function computeTimezoneDiffWithLocal(timezone: string | undefined): number {
+/**
+ * Offset of a named time zone against the browser's own, in milliseconds, at a
+ * given instant.
+ *
+ * Uses `Intl` rather than moment-timezone because that library's zone database
+ * costs 696 KB of the bundle — 38 % of it — and the card needs nothing from it
+ * but this offset. `Intl` reads the zone data the browser already ships.
+ *
+ * `at` is a parameter because an offset is only valid for an instant: a zone that
+ * observes DST answers differently on either side of a transition, so a caller
+ * computing a boundary has to ask about that boundary rather than about now.
+ */
+export function computeTimezoneDiffWithLocal(timezone: string | undefined, at: Date = new Date()): number {
   if (!timezone) return 0;
-  return (moment().utcOffset() - moment().tz(timezone).utcOffset()) * 60 * 1000;
+  const zoneOffsetMinutes = zoneUtcOffsetInMinutes(timezone, at);
+  if (zoneOffsetMinutes === undefined) return 0;
+  return (-at.getTimezoneOffset() - zoneOffsetMinutes) * 60 * 1000;
+}
+
+/**
+ * A zone's UTC offset in minutes, or undefined if the runtime rejects the zone.
+ *
+ * Home Assistant reports its configured zone as a plain string, and an
+ * unrecognised one makes `Intl` throw rather than fall back — the card must keep
+ * rendering in local time instead of failing, which is what moment-timezone did.
+ */
+function zoneUtcOffsetInMinutes(timezone: string, at: Date): number | undefined {
+  let formatted: string;
+  try {
+    formatted =
+      new Intl.DateTimeFormat('en-US', { timeZone: timezone, timeZoneName: 'longOffset' })
+        .formatToParts(at)
+        .find((part) => part.type === 'timeZoneName')?.value ?? '';
+  } catch {
+    return undefined;
+  }
+  // "GMT+02:00", "GMT-05:30", "GMT+05:45" — and bare "GMT" for UTC itself.
+  const match = /^GMT(?:([+-])(\d{2}):(\d{2}))?$/.exec(formatted);
+  if (!match) return undefined;
+  if (!match[1]) return 0;
+  const minutes = Number(match[2]) * 60 + Number(match[3]);
+  return match[1] === '-' ? -minutes : minutes;
+}
+
+/**
+ * The wall clock a named zone shows at an instant, as plain calendar fields.
+ *
+ * Fields rather than a Date on purpose: a Date is always an instant in some zone,
+ * and the whole point here is to do calendar arithmetic that no zone interferes
+ * with. `en-CA` because it formats as ISO-like fixed-width numbers.
+ */
+function wallClockInZone(at: Date, timezone: string): WallClock | undefined {
+  let parts: Intl.DateTimeFormatPart[];
+  try {
+    parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }).formatToParts(at);
+  } catch {
+    return undefined;
+  }
+  const field = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  const wc = {
+    year: field('year'),
+    month: field('month'),
+    day: field('day'),
+    hour: field('hour'),
+    minute: field('minute'),
+    second: field('second'),
+    ms: at.getMilliseconds(),
+  };
+  return Object.values(wc).some((v) => Number.isNaN(v)) ? undefined : wc;
+}
+
+interface WallClock {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+  ms: number;
+}
+
+/** The wall clock treated as if it were UTC, which is what makes it arithmetic. */
+function wallClockAsUtc(wc: WallClock): number {
+  return Date.UTC(wc.year, wc.month - 1, wc.day, wc.hour, wc.minute, wc.second, wc.ms);
+}
+
+function utcAsWallClock(ms: number): WallClock {
+  const d = new Date(ms);
+  return {
+    year: d.getUTCFullYear(),
+    month: d.getUTCMonth() + 1,
+    day: d.getUTCDate(),
+    hour: d.getUTCHours(),
+    minute: d.getUTCMinutes(),
+    second: d.getUTCSeconds(),
+    ms: d.getUTCMilliseconds(),
+  };
+}
+
+/**
+ * The instant at which a named zone shows the given wall clock.
+ *
+ * A wall clock is not a unique instant twice a year. When the clocks go back an
+ * hour, every wall clock in that hour happens twice, and the two candidate
+ * offsets are the ones in force a day either side; the earlier instant is chosen,
+ * matching moment-timezone, so a `span: {start: day}` chart does not jump an hour
+ * on that one morning. When the clocks go forward, the skipped wall clock has no
+ * instant at all, no candidate validates, and the fallback resolves to the hour
+ * after the gap — again what moment-timezone answers.
+ */
+function instantFromWallClock(wc: WallClock, timezone: string): Date {
+  const asUtc = wallClockAsUtc(wc);
+  const surroundingOffsets = [
+    zoneUtcOffsetInMinutes(timezone, new Date(asUtc - 86_400_000)),
+    zoneUtcOffsetInMinutes(timezone, new Date(asUtc + 86_400_000)),
+  ].filter((offset): offset is number => offset !== undefined);
+  const valid = [...new Set(surroundingOffsets)]
+    .map((offset) => ({ offset, instant: asUtc - offset * 60_000 }))
+    .filter(({ offset, instant }) => zoneUtcOffsetInMinutes(timezone, new Date(instant)) === offset)
+    .map(({ instant }) => instant);
+  if (valid.length > 0) return new Date(Math.min(...valid));
+
+  const firstGuess = zoneUtcOffsetInMinutes(timezone, new Date(asUtc)) ?? 0;
+  const firstInstant = asUtc - firstGuess * 60_000;
+  const secondGuess = zoneUtcOffsetInMinutes(timezone, new Date(firstInstant)) ?? 0;
+  return new Date(secondGuess === firstGuess ? firstInstant : asUtc - secondGuess * 60_000);
+}
+
+const WALL_CLOCK_UNIT_MS: Partial<Record<ChartCardStartEnd, number>> = {
+  minute: 60_000,
+  hour: 3_600_000,
+  day: 86_400_000,
+  week: 7 * 86_400_000,
+  isoWeek: 7 * 86_400_000,
+};
+
+/**
+ * Truncates a wall clock down to the start of the unit containing it.
+ *
+ * `week` follows moment's locale, which is what the local code path does, so the
+ * two agree when a dashboard switches between local and server time.
+ */
+function startOfWallClock(wc: WallClock, unit: ChartCardStartEnd): WallClock {
+  const truncated = { ...wc, ms: 0 };
+  if (unit === 'minute') return { ...truncated, second: 0 };
+  const toHour = { ...truncated, second: 0, minute: 0 };
+  if (unit === 'hour') return toHour;
+  const toDay = { ...toHour, hour: 0 };
+  if (unit === 'day') return toDay;
+  if (unit === 'week' || unit === 'isoWeek') {
+    const weekday = new Date(Date.UTC(wc.year, wc.month - 1, wc.day)).getUTCDay();
+    const firstDay = unit === 'isoWeek' ? 1 : moment.localeData().firstDayOfWeek();
+    const back = (weekday - firstDay + 7) % 7;
+    return utcAsWallClock(wallClockAsUtc(toDay) - back * 86_400_000);
+  }
+  if (unit === 'month') return { ...toDay, day: 1 };
+  return { ...toDay, day: 1, month: 1 };
+}
+
+function startOfNextWallClock(start: WallClock, unit: ChartCardStartEnd): WallClock {
+  const fixed = WALL_CLOCK_UNIT_MS[unit];
+  if (fixed !== undefined) return utcAsWallClock(wallClockAsUtc(start) + fixed);
+  if (unit === 'month') {
+    return start.month === 12 ? { ...start, year: start.year + 1, month: 1 } : { ...start, month: start.month + 1 };
+  }
+  return { ...start, year: start.year + 1 };
+}
+
+/**
+ * Start of the unit containing `at`, as read by a clock in `timezone`.
+ *
+ * Without a zone this is plain local moment, so a dashboard following the browser
+ * keeps behaving exactly as before.
+ */
+export function startOfInTimezone(at: Date, timezone: string | undefined, unit: ChartCardStartEnd): Date {
+  const wc = timezone ? wallClockInZone(at, timezone) : undefined;
+  if (!timezone || !wc) return moment(at).startOf(unit).toDate();
+  return instantFromWallClock(startOfWallClock(wc, unit), timezone);
+}
+
+/**
+ * Last millisecond of the unit containing `at`, as read by a clock in `timezone`.
+ *
+ * Derived as the last wall clock *inside* the unit rather than as the next unit's
+ * start minus a millisecond, because those two differ exactly where it matters.
+ * When the clocks go back, 02:59:59.999 is followed by 02:00 again, not by 03:00:
+ * subtracting a millisecond from the next start lands an hour late, while asking
+ * for 02:59:59.999 and resolving that wall clock to its earliest instant lands on
+ * the edge of the hour the caller is actually in. On a day the transition
+ * shortens or lengthens, the same expression still yields 23:59:59.999 of that
+ * day, which is why it is not special-cased per unit.
+ */
+export function endOfInTimezone(at: Date, timezone: string | undefined, unit: ChartCardStartEnd): Date {
+  const wc = timezone ? wallClockInZone(at, timezone) : undefined;
+  if (!timezone || !wc) return moment(at).endOf(unit).toDate();
+  const nextStart = startOfNextWallClock(startOfWallClock(wc, unit), unit);
+  return instantFromWallClock(utcAsWallClock(wallClockAsUtc(nextStart) - 1), timezone);
 }
 
 export function isUsingServerTimezone(/*config: ChartCardConfig, */ hass: HomeAssistant | undefined): boolean {
