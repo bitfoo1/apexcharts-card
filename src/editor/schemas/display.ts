@@ -1,8 +1,9 @@
+import { ChartCardExternalConfig, ChartCardHeaderExternalConfig } from '../../types-config';
 import { HaFormSchema } from '../types';
 
 // Header title text input (booleans rendered separately via bool-grid)
-export const HEADER_TITLE_SCHEMA: HaFormSchema[] = [{ name: 'title', selector: { text: {} } }];
-export const HEADER_BOOL_FIELDS = [
+export const HEADER_TITLE_SCHEMA: HaFormSchema<ChartCardHeaderExternalConfig>[] = [{ name: 'title', selector: { text: {} } }];
+export const HEADER_BOOL_FIELDS: readonly (keyof ChartCardHeaderExternalConfig)[] = [
   'show',
   'floating',
   'show_states',
@@ -12,9 +13,14 @@ export const HEADER_BOOL_FIELDS = [
 ] as const;
 
 // Color/label text fields; `show` is rendered separately via bool-grid
-export const NOW_SCHEMA: HaFormSchema[] = [
+export const NOW_SCHEMA: HaFormSchema<ChartCardExternalConfig['now']>[] = [
   { name: 'color', selector: { text: {} } },
   { name: 'label', selector: { text: {} } },
 ];
 
-export const SHOW_BOOL_FIELDS = ['loading', 'last_updated'] as const;
+// `version` was missing here until the coverage test pointed it out.
+export const SHOW_BOOL_FIELDS: readonly (keyof NonNullable<ChartCardExternalConfig['show']>)[] = [
+  'loading',
+  'last_updated',
+  'version',
+];

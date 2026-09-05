@@ -308,8 +308,8 @@ export class ApexChartsCardSeriesItemEditor extends LitElement {
     };
   }
 
-  private _advancedSchema(): HaFormSchema[] {
-    const schema: HaFormSchema[] = [...SERIES_ADVANCED_BASE_SCHEMA];
+  private _advancedSchema(): HaFormSchema<ChartCardSeriesExternalConfig>[] {
+    const schema: HaFormSchema<ChartCardSeriesExternalConfig>[] = [...SERIES_ADVANCED_BASE_SCHEMA];
     if (this.config?.chart_type === 'radialBar') {
       schema.push({
         type: 'grid',

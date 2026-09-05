@@ -1,6 +1,7 @@
+import { ChartCardExternalConfig } from '../../types-config';
 import { HaFormSchema, SEL_FALSE, SEL_TRUE, SEL_UNDEFINED } from '../types';
 
-export const GENERAL_TOP_SCHEMA: HaFormSchema[] = [
+export const GENERAL_TOP_SCHEMA: HaFormSchema<ChartCardExternalConfig>[] = [
   {
     name: 'graph_span',
     selector: { text: {} },
@@ -8,7 +9,7 @@ export const GENERAL_TOP_SCHEMA: HaFormSchema[] = [
 ];
 
 // Layout select, rendered side-by-side with the `stacked` bool-grid switch.
-export const LAYOUT_SCHEMA: HaFormSchema[] = [
+export const LAYOUT_SCHEMA: HaFormSchema<ChartCardExternalConfig>[] = [
   {
     name: 'layout',
     selector: {
@@ -23,7 +24,7 @@ export const LAYOUT_SCHEMA: HaFormSchema[] = [
   },
 ];
 
-export const GENERAL_BOTTOM_SCHEMA: HaFormSchema[] = [
+export const GENERAL_BOTTOM_SCHEMA: HaFormSchema<ChartCardExternalConfig>[] = [
   {
     type: 'grid',
     name: '',

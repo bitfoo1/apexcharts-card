@@ -1,7 +1,8 @@
+import { ChartCardSeriesExternalConfig, ChartCardSeriesShowConfigExt } from '../../types-config';
 import { HaFormSchema, SEL_FALSE, SEL_TRUE, SEL_UNDEFINED } from '../types';
 
 // ── Core fields rendered above the expandables (entity is handled separately). ──
-export const SERIES_CORE_SCHEMA: HaFormSchema[] = [
+export const SERIES_CORE_SCHEMA: HaFormSchema<ChartCardSeriesExternalConfig>[] = [
   { name: 'name', selector: { text: {} } },
   {
     type: 'grid',
@@ -26,7 +27,7 @@ export const SERIES_CORE_SCHEMA: HaFormSchema[] = [
 ];
 
 // Inner fields of the Group By expander (start_with_last rendered separately via bool-grid)
-export const SERIES_GROUP_BY_SCHEMA: HaFormSchema[] = [
+export const SERIES_GROUP_BY_SCHEMA: HaFormSchema<ChartCardSeriesExternalConfig['group_by']>[] = [
   {
     type: 'grid',
     name: '',
@@ -70,7 +71,7 @@ export const SERIES_GROUP_BY_SCHEMA: HaFormSchema[] = [
 ];
 
 // ── Data processing ── (group_by rendered separately as a custom panel)
-export const SERIES_DATA_PROCESSING_SCHEMA: HaFormSchema[] = [
+export const SERIES_DATA_PROCESSING_SCHEMA: HaFormSchema<ChartCardSeriesExternalConfig>[] = [
   {
     name: 'statistics',
     type: 'expandable',
@@ -149,7 +150,7 @@ export const SERIES_DATA_PROCESSING_SCHEMA: HaFormSchema[] = [
 ];
 
 // ── Appearance ──
-export const SERIES_APPEARANCE_SCHEMA: HaFormSchema[] = [
+export const SERIES_APPEARANCE_SCHEMA: HaFormSchema<ChartCardSeriesExternalConfig>[] = [
   {
     type: 'grid',
     name: '',
@@ -203,7 +204,7 @@ export const SERIES_APPEARANCE_SCHEMA: HaFormSchema[] = [
 ];
 
 // Visibility selects (booleans are rendered separately via bool-grid)
-export const SERIES_VISIBILITY_SELECT_SCHEMA: HaFormSchema[] = [
+export const SERIES_VISIBILITY_SELECT_SCHEMA: HaFormSchema<ChartCardSeriesShowConfigExt>[] = [
   {
     name: 'in_header',
     selector: {
@@ -284,7 +285,7 @@ export const SERIES_VISIBILITY_BOOL_FIELDS: { name: string; defaultValue: boolea
 ];
 
 // ── Advanced ──
-export const SERIES_ADVANCED_BASE_SCHEMA: HaFormSchema[] = [
+export const SERIES_ADVANCED_BASE_SCHEMA: HaFormSchema<ChartCardSeriesExternalConfig>[] = [
   {
     type: 'grid',
     name: '',
