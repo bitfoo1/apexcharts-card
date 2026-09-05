@@ -30,6 +30,7 @@ rewriting 30 upstream lines — see `eslint.config.mjs` for that pattern.
 | `src/graphEntry.ts` | Data layer: history and statistics fetching, caching in localForage, `group_by`, `func`, `data_generator`, `transform`, gap filling. |
 | `src/apex-layouts.ts` | Builds the ApexCharts options object from the card config. Locale resolution lives here. |
 | `src/layouts/minimal.ts` | The `layout: minimal` variant. |
+| `src/editor/` | The visual editor (upstream PR RomRider#1086): tabs, components and the `ha-form` schemas. The schemas are typed against `types-config.ts`, so a field name must be a real config key — see `tests/editor-schema-coverage.test.ts` for the other direction. |
 | `src/types-config.ts` | The user-facing YAML config types. **Generated companion:** `src/types-config-ti.ts` via `npm run build:types-check` — never edit it by hand. |
 | `src/utils.ts`, `src/const.ts`, `src/locales.ts`, `src/styles.ts` | Helpers, defaults, ApexCharts locales, CSS. |
 | `tests/` | Vitest unit tests. |
@@ -94,6 +95,24 @@ Notes that cost time to rediscover:
   the element and are usually a better assertion than a screenshot; and card
   elements live in nested shadow roots, so a walker that descends `shadowRoot` is
   needed to find them at all.
+- **The visual editor cannot be checked on the dev dashboard**, because a YAML
+  dashboard offers no UI editor at all. Create a storage-mode one instead — over
+  the running instance's own WebSocket connection, reachable from the browser as
+  `hass.callWS({type: 'lovelace/dashboards/create', url_path: 'editor-test',
+  mode: 'storage', title: 'Editor test'})`, then seed it with
+  `lovelace/config/save` and open `/editor-test/0?edit=1`. Never use the
+  Home-Assistant MCP tools for this: they point at production. Mounting
+  `apexcharts-card-editor` into `document.body` by hand is not a substitute — HA's
+  form components need context the dialog provides, and the missing `_i18n`
+  surfaces as an error that looks like a defect in the card.
+- **The property worth testing about the editor is that it merges.** It must emit
+  the config it was given plus the edited key; an editor that rebuilds from its own
+  schema would silently drop every option without a form field. Toggle one switch
+  and diff the emitted config against the original.
+- A sleeping host makes `tests/dev-sensors.test.ts` fail with a recorder gap
+  (`[9,0,0]`) although the sensors are alive and their states current — Home
+  Assistant logs nothing across the suspend and the recorder has no rows for it.
+  Give the container a few minutes of uninterrupted runtime and re-run.
 - `dev/docker/config` is a live Home Assistant config directory. Only
   `configuration.yaml` and `ui-lovelace.yaml` are tracked.
 - `mise run dev:dashboard:check` validates every dev-dashboard card against the
