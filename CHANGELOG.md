@@ -1,3 +1,33 @@
+## [2.5.0](https://github.com/bitfoo1/apexcharts-card/compare/v2.4.1...v2.5.0) (2026-09-05)
+
+### Features
+
+* **dev:** :hammer: local dev environment, so testing needs no release ([e46233e](https://github.com/bitfoo1/apexcharts-card/commit/e46233ebf0e0ecc918a5bc3b34f20132cf6c996b))
+* **editor:** :sparkles: adopt the visual editor from upstream PR RomRider[#1086](https://github.com/bitfoo1/apexcharts-card/issues/1086) ([ada1ce1](https://github.com/bitfoo1/apexcharts-card/commit/ada1ce1f44606f9dd693c0f4badedac052154208))
+
+### Bug Fixes
+
+* **dev:** :bug: bust the browser cache on the dev resource URL ([723e131](https://github.com/bitfoo1/apexcharts-card/commit/723e1310dec0ed1359e9e3523c5fb31369a81e95))
+* **dev:** :bug: make the gallery show what its review notes claim ([dc148af](https://github.com/bitfoo1/apexcharts-card/commit/dc148afbde7662e5d39065b5e7cd46de0ee78207)), closes [#1055](https://github.com/bitfoo1/apexcharts-card/issues/1055)
+* **dev:** :bug: plot the [#1031](https://github.com/bitfoo1/apexcharts-card/issues/1031) forecast from its attribute, not its state ([55429c2](https://github.com/bitfoo1/apexcharts-card/commit/55429c27d4492e09f4941f1ba5cfdbf9c0537ab4))
+* **dev:** :bug: repair the tooltip:preview task under mise's KDL v2 parser ([3e26e44](https://github.com/bitfoo1/apexcharts-card/commit/3e26e442a74838bbe0b949cd70b0bddb1e424583))
+* **dev:** :bug: restore the 5s update rate broken by the sparse sensor ([595e183](https://github.com/bitfoo1/apexcharts-card/commit/595e183bdc812e6e0f6e6ca1e2f342cb82797d3b))
+* **yaxis:** :bug: apply a layout variant's y-axis settings so minimal hides its axis ([01bb467](https://github.com/bitfoo1/apexcharts-card/commit/01bb4677dadc7e47d14da60b384d6d54416cafe6)), closes [#1031](https://github.com/bitfoo1/apexcharts-card/issues/1031)
+* **yaxis:** :bug: keep a shared y-axis visible when its first series is hidden ([9472b1a](https://github.com/bitfoo1/apexcharts-card/commit/9472b1ad9c9297c5a8a6a5397c814ecb57f3196a)), closes [RomRider/apexcharts-card#1031](https://github.com/RomRider/apexcharts-card/issues/1031)
+
+### Performance
+
+* **bundle:** :zap: import ApexCharts per entry point instead of the whole build ([6a50e21](https://github.com/bitfoo1/apexcharts-card/commit/6a50e217ecedfbb05bcc4c36f04844bfef3fd353))
+* **bundle:** :zap: read time zone offsets from Intl instead of bundling a zone database ([c2328cc](https://github.com/bitfoo1/apexcharts-card/commit/c2328ccd0ebcb458774d18afabcee2f42b589a61))
+
+### Documentation
+
+* :memo: document the local dev workflow and require English ([6798a6f](https://github.com/bitfoo1/apexcharts-card/commit/6798a6f8429c4b7353edb0c4297eabf820103e48))
+* :memo: name the dev dashboard's real view paths ([b90b62d](https://github.com/bitfoo1/apexcharts-card/commit/b90b62dea8a36a2c550ee7b1dcdc50ff3e197e34))
+* **agents:** :memo: record how to verify the editor and one environment trap ([1e61ba9](https://github.com/bitfoo1/apexcharts-card/commit/1e61ba9eb371f7c2b469bcd7f4bfd95e3293cf87))
+* **agents:** :memo: require reproduction first and precise card references ([50a9545](https://github.com/bitfoo1/apexcharts-card/commit/50a9545d4fae5e66e461b5a3771edd36175e020d))
+* **dev:** :memo: correct the gallery's shared-tooltip claims, measured in a browser ([b23c28f](https://github.com/bitfoo1/apexcharts-card/commit/b23c28fb71054f6ad7a491a84aafaccef5b2f3f4))
+
 ## [2.4.1](https://github.com/bitfoo1/apexcharts-card/compare/v2.4.0...v2.4.1) (2026-08-25)
 
 ### Bug Fixes

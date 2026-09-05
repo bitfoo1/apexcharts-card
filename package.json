@@ -1,6 +1,6 @@
 {
   "name": "apexcharts-card",
-  "version": "2.4.1",
+  "version": "2.5.0",
   "description": "A Home Assistant Lovelace card using ApexCharts to render graphs",
   "main": "src/apexcharts-card.ts",
   "scripts": {
@@ -20,7 +20,7 @@
     "dev:ha": "docker compose -f dev/docker/compose.yaml up -d && node dev/docker/bootstrap.mjs",
     "dev:ha:down": "docker compose -f dev/docker/compose.yaml down",
     "dev:ha:logs": "docker compose -f dev/docker/compose.yaml logs -f",
-    "dev:ha:reset": "docker compose -f dev/docker/compose.yaml down -v && find dev/docker/config -mindepth 1 -maxdepth 1 ! -name configuration.yaml ! -name ui-lovelace.yaml -exec rm -rf {} + && echo 'config cleared \u2014 run mise run dev:ha for a fresh instance'",
+    "dev:ha:reset": "docker compose -f dev/docker/compose.yaml down -v && find dev/docker/config -mindepth 1 -maxdepth 1 ! -name configuration.yaml ! -name ui-lovelace.yaml -exec rm -rf {} + && echo 'config cleared — run mise run dev:ha for a fresh instance'",
     "dev:dashboard:check": "vitest run tests/dev-dashboard.test.ts"
   },
   "repository": {
@@ -34,7 +34,7 @@
     "charts",
     "home-assistant"
   ],
-  "author": "J\u00e9r\u00f4me Wiedemann",
+  "author": "Jérôme Wiedemann",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/bitfoo1/apexcharts-card/issues"
