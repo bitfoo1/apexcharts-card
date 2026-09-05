@@ -13,7 +13,7 @@ const dev = process.env.ROLLUP_WATCH;
 const plugins = [
   nodeResolve({}),
   commonjs(),
-  typescript(),
+  typescript({ include: ['src/**/*.ts'] }),
   json(),
   babel({
     exclude: 'node_modules/**',
@@ -43,6 +43,11 @@ export default [
     input: 'src/apexcharts-card.ts',
     output: {
       dir: './dist',
+      // The editor is behind a dynamic import so it only costs parse time when a
+      // dashboard is edited — but it has to land in the same file regardless:
+      // HACS downloads the single asset matching the repository name, so a
+      // separate chunk would 404 for everyone who installed through it.
+      inlineDynamicImports: true,
       format: 'es',
       sourcemap: dev ? true : false,
       globals: {

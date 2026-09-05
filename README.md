@@ -62,7 +62,8 @@ One caveat, and one improvement. ApexCharts 6 is bigger than 5, but this fork
 imports it per entry point (`apexcharts/core` plus the seven chart types the card
 can produce and five features) instead of the complete build, and it derives time
 zone offsets from `Intl` instead of bundling moment-timezone's zone database. The
-bundle is **1.12 MB against upstream's 1.63 MB**. A chart type or feature that is
+bundle is **1.22 MB against upstream's 1.63 MB**, including the visual editor
+described below. A chart type or feature that is
 not imported cannot be reached through `apex_config` either, so the imports
 deliberately include the toolbar, the exporter and keyboard navigation, which the
 card never enables itself.
@@ -86,9 +87,27 @@ Deliberately **not** adopted:
 [#360](https://github.com/RomRider/apexcharts-card/pull/360) removes a guard in
 the `start_with_last` path without a regression test, and
 [#1066](https://github.com/RomRider/apexcharts-card/pull/1066),
-[#1099](https://github.com/RomRider/apexcharts-card/pull/1099),
-[#1086](https://github.com/RomRider/apexcharts-card/pull/1086) and the other
+[#1099](https://github.com/RomRider/apexcharts-card/pull/1099) and the other
 open PRs are features rather than fixes.
+
+### Visual editor <!-- omit in toc -->
+
+Adopted from [#1086](https://github.com/RomRider/apexcharts-card/pull/1086): the
+card can be configured in the Home Assistant UI instead of only in YAML. Five
+tabs — General, Series, Display, Y-Axis, Advanced — plus a live preview, with
+`apex_config` and anything else without a form field editable as YAML.
+
+A feature rather than a fix, and the only one this fork adopts, because YAML was
+the sole way to configure the card. It **never rewrites your configuration**: an
+edit merges into what was there, so options with no form field survive
+untouched — verified against a config carrying `cache`, `span`, `now`,
+`all_series_config`, `apex_config`, `time_delta`, `extend_to`, `stroke_dash`,
+`show.extremas` and `group_by.start_with_last`.
+
+It costs 98 KB of the bundle. The editor sits behind a dynamic import, so its
+schemas are only evaluated when a card is edited, but the code ships in the same
+file either way: HACS downloads the single asset named after the repository, and a
+separate chunk would 404 for anyone who installed that way.
 
 ### Configuration change: `locale` codes <!-- omit in toc -->
 

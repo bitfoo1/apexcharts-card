@@ -1671,6 +1671,24 @@ class ChartsCard extends LitElement {
     };
   }
 
+  /**
+   * Upstream PR RomRider#1086 — the visual editor Home Assistant opens when a
+   * card is edited in the UI.
+   *
+   * Dynamically imported so the editor's element definitions and form schemas are
+   * only evaluated when someone actually edits a card, rather than on every
+   * dashboard load. The module still ships inside the same bundle, because HACS
+   * downloads one asset — see `inlineDynamicImports` in `rollup.config.js`.
+   *
+   * Adopted although the fork's remit is fixes rather than features, because
+   * without it a card can only be configured in YAML, and `getConfigElement` is
+   * the sole hook Home Assistant offers for that.
+   */
+  static async getConfigElement(): Promise<HTMLElement> {
+    await import('./editor/index');
+    return document.createElement('apexcharts-card-editor');
+  }
+
   static getStubConfig(hass: HomeAssistant, entities: string[], entitiesFallback: string[]) {
     const entityFilter = (stateObj: HassEntity): boolean => {
       return !isNaN(Number(stateObj.state));
