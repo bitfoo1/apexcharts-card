@@ -47,6 +47,13 @@ brings, without any configuration change:
   points*. Raw history from two entities does not qualify, because the recorder
   stores a different number of points per entity — aggregate them onto the same
   buckets with `group_by` if you want one tooltip listing all of them.
+
+  That works while every series comes from history. It cannot match a `group_by`
+  series with a `data_generator` series that reaches into the future: the bucketer
+  drops the leading boundary bucket and trims empty buckets off the end, so a
+  bucketed series starts one bucket late and stops at its last real value, while
+  the generator covers the whole span. Measured on a 24-hour card fed by a Solcast
+  forecast: 41 points against 48, and no configuration closes that gap.
 - Coherent animation when the number of data points changes, instead of points
   popping in and out. Disable with `apex_config.chart.animations.dynamicAnimation.enabled: false`.
 - Two-finger pinch zoom and pan on touch devices, with axis rails so a vertical
