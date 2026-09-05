@@ -86,6 +86,14 @@ async function login(): Promise<string> {
  * the minutes present in the history would pass. The partial first and last
  * minutes are excluded, so a run started mid-minute does not read as a gap.
  */
+/**
+ * Points per wall-clock minute over the window, including minutes with none.
+ *
+ * Counting the empty minutes is the point: a sensor that moved to a 2-minute
+ * trigger still reports one point in the minutes it fires, so a check over only
+ * the minutes present in the history would pass. The partial first and last
+ * minutes are excluded, so a run started mid-minute does not read as a gap.
+ */
 async function pointsPerMinute(entity: string): Promise<number[]> {
   const now = Date.now();
   const since = new Date(now - WINDOW_MINUTES * 60000).toISOString();
@@ -106,6 +114,22 @@ async function pointsPerMinute(entity: string): Promise<number[]> {
   return [...counts.values()];
 }
 
+/**
+ * Whether a sensor is currently varying at all.
+ *
+ * The synthetic PV sensors follow a daily curve that is flat zero at night, and
+ * their noise term is a factor, so it vanishes with the curve. A constant sensor
+ * produces no state *changes*, the recorder stores no rows, and a density check
+ * on it therefore fails every night while nothing is wrong — which it did, twice.
+ * Density is only a meaningful contract while the value moves.
+ */
+async function isVarying(entity: string): Promise<boolean> {
+  const state = await (
+    await fetch(`${BASE}/api/states/${entity}`, { headers: { authorization: `Bearer ${token}` } })
+  ).json();
+  return Number(state.state) !== 0;
+}
+
 beforeAll(async () => {
   try {
     token = await login();
@@ -123,6 +147,10 @@ describe('dev instance sensor density', () => {
   for (const { entity, minPerMinute, why } of EXPECTED) {
     it(`${entity} updates often enough to fill a 1-minute bucket (${why})`, async () => {
       if (!token) return;
+      if (!(await isVarying(entity))) {
+        console.warn(`[dev-sensors] ${entity} reads 0 (night side of its curve) — density not asserted`);
+        return;
+      }
       const counts = await pointsPerMinute(entity);
       expect(counts.length, `no complete minute of history for ${entity}`).toBeGreaterThan(0);
       expect(Math.min(...counts), `points per minute: ${JSON.stringify(counts)}`).toBeGreaterThanOrEqual(
