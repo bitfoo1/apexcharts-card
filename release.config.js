@@ -20,11 +20,22 @@ module.exports = {
       {
         preset: 'conventionalcommits',
         presetConfig: {
+          /*
+           * This list replaces the preset's own, so a type missing here is dropped
+           * from the notes entirely rather than falling back to a default section.
+           * That silently hid the `perf` commits of the 2.5.0 cycle — the ones that
+           * took 41 % off the bundle, which is the most user-visible change there
+           * is. Keep every type the repository actually uses.
+           */
           types: [
             { type: 'feat', section: 'Features' },
             { type: 'fix', section: 'Bug Fixes' },
+            { type: 'perf', section: 'Performance' },
             { type: 'doc', hidden: false, section: 'Documentation' },
             { type: 'docs', hidden: false, section: 'Documentation' },
+            { type: 'refactor', hidden: true, section: 'Refactoring' },
+            { type: 'test', hidden: true, section: 'Tests' },
+            { type: 'ci', hidden: true, section: 'CI' },
             { type: 'chore', hidden: true, section: 'Chores' },
           ],
         },
