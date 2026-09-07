@@ -1,3 +1,9 @@
+## [2.6.2](https://github.com/bitfoo1/apexcharts-card/compare/v2.6.1...v2.6.2) (2026-09-07)
+
+### Bug Fixes
+
+* **legend:** :bug: let before_now and after_now drive the legend, not only the header ([e0321ad](https://github.com/bitfoo1/apexcharts-card/commit/e0321adb367be745e4e27b795c73d02c55e01952))
+
 ## [2.6.1](https://github.com/bitfoo1/apexcharts-card/compare/v2.6.0...v2.6.1) (2026-09-07)
 
 ### Bug Fixes
