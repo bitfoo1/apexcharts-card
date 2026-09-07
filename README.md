@@ -97,6 +97,19 @@ the `start_with_last` path without a regression test, and
 [#1099](https://github.com/RomRider/apexcharts-card/pull/1099) and the other
 open PRs are features rather than fixes.
 
+### Fork-only fixes <!-- omit in toc -->
+
+Defects found here rather than upstream, each with a regression test unless the note
+says otherwise.
+
+| What was wrong | Since |
+| --- | --- |
+| Hiding the **first** series through the legend removed a y-axis shared by several series — upstream issue [#1031](https://github.com/RomRider/apexcharts-card/issues/1031), never fixed there. The card emits one axis entry per series and marks only the first visible, and ApexCharts drops an axis once every series mapped to it is collapsed; the collapsed series is now routed into ApexCharts' ancillary bucket instead. Note what does *not* change: the axis maximum stays, because the card derives min/max from every series of that axis regardless of the legend. | v2.4.0 |
+| `layout: minimal` still drew a y-axis, whose bottom label hung ~7px below the card (`ha-card` is `overflow: visible`). The variant declares its axis as a single object while the card generates one entry per series, and merging replaced one with the other — which also discarded any `min`/`max` configured on such a card. Folded in `_generateYAxisConfig`, not while assembling the options: `_updateData` pushes `apex_config.yaxis` back on every refresh and undid the earlier placement. | v2.5.0 |
+| A bucket with no value printed the word `null` beside the unit in the tooltip. Shows the same `N/A` placeholder the header uses. | v2.6.0 |
+| The header states and the legend read the *last point* of a series as "the current value", so any series ending in a gap showed `N/A` — every series under `group_by.full_span`. Both now read the last value that exists. | v2.6.1 |
+| The legend ignored `show.in_header`, so a series reaching into the future showed the end of its forecast (0 at midnight) while the header showed the value at the now line. The legend follows all three modes now. Under `raw` it reads through the graph rather than the `hass` the formatter captured at chart creation, which would otherwise freeze the value at that moment. | v2.6.2, v2.6.3 |
+
 ### Visual editor <!-- omit in toc -->
 
 Adopted from [#1086](https://github.com/RomRider/apexcharts-card/pull/1086): the
