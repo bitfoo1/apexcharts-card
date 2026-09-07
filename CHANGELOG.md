@@ -1,3 +1,13 @@
+## [2.6.0](https://github.com/bitfoo1/apexcharts-card/compare/v2.5.0...v2.6.0) (2026-09-07)
+
+### Features
+
+* **group_by:** :sparkles: add full_span so a measured series can share a tooltip with a forecast ([f402434](https://github.com/bitfoo1/apexcharts-card/commit/f402434f80810deac699aa5935c9201d3b3d5f54))
+
+### Documentation
+
+* :memo: name the case where matching group_by still cannot share a tooltip ([a30eead](https://github.com/bitfoo1/apexcharts-card/commit/a30eead6b0c28daddca53aff27b45eebb97c1437))
+
 ## [2.5.0](https://github.com/bitfoo1/apexcharts-card/compare/v2.4.1...v2.5.0) (2026-09-05)
 
 ### Features
