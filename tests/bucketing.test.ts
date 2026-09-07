@@ -148,6 +148,58 @@ describe('bucketHistory trailing gaps', () => {
   });
 });
 
+describe('bucketHistory full_span', () => {
+  /*
+   * full_span exists so a measured series can line up with a data_generator series
+   * covering the future: ApexCharts builds a shared tooltip only while every
+   * visible series carries the same number of points, and a measured series
+   * otherwise stops at the present while a generated one does not.
+   */
+  it('keeps a bucket per interval instead of stopping at the last real value', () => {
+    const options = { durationMs: 5 * MINUTE, fill: 'null' as const, now: T0 + 12 * MINUTE };
+    const stopping = bucketHistory([at(1, 10), at(6, 20)], range(35), options);
+    const spanning = bucketHistory([at(1, 10), at(6, 20)], range(35), { ...options, fullSpan: true });
+
+    // Both points land in the 5-minute bucket, so one bucket holds the data and
+    // everything after it is what full_span adds.
+    expect(boundaries(stopping)).toEqual([5]);
+    expect(boundaries(spanning)).toEqual([5, 10, 15, 20, 25, 30]);
+  });
+
+  it('marks the buckets beyond the data according to fill', () => {
+    const base = { durationMs: 5 * MINUTE, now: T0 + 12 * MINUTE, fullSpan: true };
+    const asNull = bucketHistory([at(1, 10), at(6, 20)], range(25), { ...base, fill: 'null' });
+    const asLast = bucketHistory([at(1, 10), at(6, 20)], range(25), { ...base, fill: 'last' });
+    const asZero = bucketHistory([at(1, 10), at(6, 20)], range(25), { ...base, fill: 'zero' });
+
+    expect(values(asNull)).toEqual([[20], [null], [null], [null]]);
+    expect(values(asLast)).toEqual([[20], [20], [20], [20]]);
+    expect(values(asZero)).toEqual([[20], [0], [0], [0]]);
+  });
+
+  it('produces exactly one point per interval of the span', () => {
+    // The shape of the card this was built for: a 24-hour span in 30-minute
+    // buckets against a forecast of 48 half-hourly points.
+    const DAY = 24 * 60 * MINUTE;
+    const HALF_HOUR = 30 * MINUTE;
+    const data: [number, number | null][] = [];
+    for (let t = 0; t < 20 * 60 * MINUTE; t += MINUTE) data.push(at(t / MINUTE, 100));
+    // The card fetches one bucket before the span, so the range starts there.
+    const cardRange = moment.range(moment(T0 - HALF_HOUR), moment(T0 + DAY));
+
+    const buckets = bucketHistory(data, cardRange, {
+      durationMs: HALF_HOUR,
+      fill: 'null',
+      now: T0 + 20 * 60 * MINUTE,
+      fullSpan: true,
+    });
+
+    expect(buckets.length).toBe(48);
+    expect(boundaries(buckets)[0]).toBe(0);
+    expect(boundaries(buckets)[47]).toBe(23 * 60 + 30);
+  });
+});
+
 describe('bucketHistory start_with_last', () => {
   /*
    * Prepends the previous bucket's last value at the boundary, so a step chart

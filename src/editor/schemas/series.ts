@@ -26,6 +26,12 @@ export const SERIES_CORE_SCHEMA: HaFormSchema<ChartCardSeriesExternalConfig>[] =
   },
 ];
 
+/** Group By flags, as data so the coverage test can see the names. */
+export const GROUP_BY_BOOL_FIELDS: readonly (keyof NonNullable<ChartCardSeriesExternalConfig['group_by']>)[] = [
+  'start_with_last',
+  'full_span',
+];
+
 // Inner fields of the Group By expander (start_with_last rendered separately via bool-grid)
 export const SERIES_GROUP_BY_SCHEMA: HaFormSchema<ChartCardSeriesExternalConfig['group_by']>[] = [
   {

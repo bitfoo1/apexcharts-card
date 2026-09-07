@@ -363,6 +363,10 @@ function getXTooltipFormatter(
 
 function getYTooltipFormatter(config: ChartCardConfig, hass: HomeAssistant | undefined) {
   return function (value, opts, conf = config, hass2 = hass) {
+    // A bucket can legitimately carry no value — a gap in history, or a bucket
+    // beyond now under group_by.full_span. Printing the placeholder the header
+    // already uses beats printing the word "null" next to a unit.
+    if (value === null || value === undefined) return [`<strong>${NO_VALUE}</strong>`];
     let lValue = value;
     if (conf.series_in_graph[opts.seriesIndex]?.invert && lValue) {
       lValue = -lValue;

@@ -410,7 +410,10 @@ export default class GraphEntry {
       const res: EntityCachePoints = this._dataBucketer(history, moment.range(startHistory, end)).map((bucket) => {
         return [bucket.timestamp, this._func(bucket.data)];
       });
-      if ([undefined, 'line', 'area'].includes(this._config.type)) {
+      // Leading nulls are dropped so a line does not start with a gap — except
+      // under full_span, where every interval of the range is the whole point and
+      // dropping any of them would break the point count it exists to guarantee.
+      if ([undefined, 'line', 'area'].includes(this._config.type) && !this._config.group_by.full_span) {
         while (res.length > 0 && res[0][1] === null) res.shift();
       }
       this._computedHistory = res;
@@ -525,6 +528,7 @@ export default class GraphEntry {
       fill: this._config.group_by.fill,
       startWithLast: this._config.group_by.start_with_last,
       hasDataGenerator: !!this._config.data_generator,
+      fullSpan: this._config.group_by.full_span,
     });
   }
 
@@ -655,6 +659,14 @@ export const AGGREGATE_FUNCS = {
  *
  * `now` is a parameter rather than a call to Date.now() so the fill behaviour,
  * which deliberately differs for buckets in the future, is reproducible.
+ *
+ * `fullSpan` keeps a bucket for every interval of the range instead of stopping at
+ * the last one holding data. It exists for a single purpose: ApexCharts only builds
+ * a shared tooltip while every visible series carries the same number of points, so
+ * a measured series can otherwise never line up with a `data_generator` series that
+ * covers the whole span — the measured one stops at the present, the generated one
+ * does not. Off by default, because ending at the last real value is the honest
+ * default for a chart of measurements.
  */
 export function bucketHistory(
 data: EntityCachePoints,
@@ -665,6 +677,7 @@ options: {
   startWithLast?: boolean;
   hasDataGenerator?: boolean;
   now?: number;
+  fullSpan?: boolean;
 },
 ): HistoryBuckets {
   const ranges = Array.from(timeRange.reverseBy('milliseconds', { step: options.durationMs })).reverse();
@@ -687,9 +700,10 @@ options: {
   const now = options.now ?? new Date().getTime();
   buckets.forEach((bucket, index) => {
     if (bucket.data.length === 0) {
-      if (options.fill === 'last' && (bucket.timestamp <= now || options.hasDataGenerator)) {
+      const withinReach = bucket.timestamp <= now || options.hasDataGenerator || options.fullSpan;
+      if (options.fill === 'last' && withinReach) {
         bucket.data[0] = [bucket.timestamp, lastNonNullBucketValue];
-      } else if (options.fill === 'zero' && (bucket.timestamp <= now || options.hasDataGenerator)) {
+      } else if (options.fill === 'zero' && withinReach) {
         bucket.data[0] = [bucket.timestamp, 0];
       } else if (options.fill === 'null') {
         bucket.data[0] = [bucket.timestamp, null];
@@ -716,8 +730,10 @@ options: {
   });
   buckets.shift();
   buckets.pop();
-  // Remove nulls at the end
+  // Remove nulls at the end, unless the caller asked for the whole span: those
+  // trailing buckets are exactly what makes the point count match a generator.
   while (
+    !options.fullSpan &&
     buckets.length > 0 &&
     (buckets[buckets.length - 1].data.length === 0 ||
       (buckets[buckets.length - 1].data.length === 1 && buckets[buckets.length - 1].data[0][1] === null))

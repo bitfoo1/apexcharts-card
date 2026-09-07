@@ -101,6 +101,7 @@ export interface ChartCardAllSeriesExternalConfig {
     func?: GroupByFunc;
     fill?: GroupByFill;
     start_with_last?: boolean;
+    full_span?: boolean;
   };
   transform?: string;
   color_threshold?: ChartCardColorThreshold[];

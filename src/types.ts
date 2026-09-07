@@ -26,6 +26,7 @@ export interface ChartCardSeriesConfig extends ChartCardSeriesExternalConfig {
     func: GroupByFunc;
     fill: GroupByFill;
     start_with_last?: boolean;
+    full_span?: boolean;
   };
   show: ChartCardSeriesShowConfig;
   ignore_history: boolean;

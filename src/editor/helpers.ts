@@ -83,6 +83,7 @@ const LABEL_MAP: Record<string, string> = {
   func: 'Function',
   fill: 'Fill',
   start_with_last: 'Start With Last',
+  full_span: 'Cover Full Span',
   period: 'Period',
   align: 'Align',
   show: 'Show',
@@ -170,6 +171,7 @@ const HELPER_MAP: Record<string, string> = {
   axis: 'Which side of the chart this axis is drawn on.',
   align_to: 'Force Y-axis ticks to align to this value',
   selection_span_text: 'e.g. 6h. Default: 1/4 of graph_span',
+  full_span: 'Keep a point for every interval, even after now, so this series can share a tooltip with a data_generator forecast',
 };
 
 export function computeHelper(schema: HaFormSchema): string {

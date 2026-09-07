@@ -451,6 +451,7 @@ The position of the marker will only update when the card updates (state change 
 | `duration` | string | `1h` | v1.0.0 | If `func` is **not** `raw` only. It builds buckets of states over a `duration`. Doesn't work for months. Eg of valid values: `2h`, `1d`, `10s`, `25min`, `1h30`, ... |
 | `fill` | string | `last` | v1.0.0 | If `func` is **not** `raw` only. If there is any missing value in the buckets of history data (grouped by duration), `last` will replace them with the last non-empty state, `zero` will fill missing values with `0`, `'null'` will fill missing values with `null` |
 | `start_with_last` | boolean | `false` | v1.8.0 | If `true`, each bucket of data will start with the last value from the previous bucket of data. Mostly useful only with `func: diff` |
+| `full_span` | boolean | `false` | v2.6.0 | Fork-only. If `true`, the series keeps one point per bucket across the whole graph span instead of ending at its last real value, empty buckets included. Its purpose is a **shared tooltip alongside a `data_generator` series that reaches into the future**: ApexCharts only combines series that carry the same number of points, and a measured series otherwise stops at the present while a generated one does not. Use `fill: 'null'` with it to leave the future as a gap rather than a flat line. |
 
 ### `func` Options
 

@@ -22,6 +22,7 @@ import {
   SERIES_APPEARANCE_SCHEMA,
   SERIES_CORE_SCHEMA,
   SERIES_DATA_PROCESSING_SCHEMA,
+  GROUP_BY_BOOL_FIELDS,
   SERIES_GROUP_BY_SCHEMA,
   SERIES_VISIBILITY_BOOL_FIELDS,
   SERIES_VISIBILITY_SELECT_SCHEMA,
@@ -212,12 +213,13 @@ export class ApexChartsCardSeriesItemEditor extends LitElement {
     this._fire({ invert: value ? true : undefined } as Partial<Series>);
   };
 
-  private _groupByStartWithLastChanged = (ev: CustomEvent): void => {
+  /** Toggles whichever group_by flag the bool grid reports, by name. */
+  private _groupByFlagChanged = (ev: CustomEvent): void => {
     ev.stopPropagation();
-    const { value } = ev.detail as { name: string; value: boolean };
-    const g: NonNullable<Series['group_by']> = { ...(this.series?.group_by || {}) };
-    if (value) g.start_with_last = true;
-    else delete g.start_with_last;
+    const { name, value } = ev.detail as { name: string; value: boolean };
+    const g = { ...(this.series?.group_by || {}) } as Record<string, unknown>;
+    if (value) g[name] = true;
+    else delete g[name];
     this._fire({ group_by: Object.keys(g).length > 0 ? g : undefined } as Partial<Series>);
   };
 
@@ -508,15 +510,13 @@ export class ApexChartsCardSeriesItemEditor extends LitElement {
                   @value-changed=${this._groupByChanged}
                 ></ha-form>
                 <apexcharts-card-bool-grid
-                  .fields=${[
-                    {
-                      name: 'start_with_last',
-                      label: computeLabel({ name: 'start_with_last' } as HaFormSchema),
-                      value: !!this.series?.group_by?.start_with_last,
-                    },
-                  ]}
-                  .columns=${1}
-                  @value-changed=${this._groupByStartWithLastChanged}
+                  .fields=${GROUP_BY_BOOL_FIELDS.map((name) => ({
+                    name,
+                    label: computeLabel({ name } as HaFormSchema),
+                    value: !!(this.series?.group_by as Record<string, unknown> | undefined)?.[name],
+                  }))}
+                  .columns=${2}
+                  @value-changed=${this._groupByFlagChanged}
                 ></apexcharts-card-bool-grid>
               </div>
             </ha-expansion-panel>
