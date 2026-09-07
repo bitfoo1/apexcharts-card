@@ -107,7 +107,7 @@ export function getLayoutConfig(
     legend: {
       position: 'bottom',
       show: true,
-      formatter: getLegendFormatter(config, hass),
+      formatter: getLegendFormatter(config, hass, graphs),
       markers: getLegendMarkers(config),
     },
     stroke: {
@@ -474,8 +474,20 @@ export function lastRenderedValue(values: (number | null)[]): number | null {
   return null;
 }
 
-function getLegendFormatter(config: ChartCardConfig, hass: HomeAssistant | undefined) {
-  return function (_, opts, conf = config, hass2 = hass) {
+/**
+ * The legend shows a series' current value, so it has to answer the same question
+ * the header does — and for a series reaching into the future those are different
+ * questions. `show.in_header: before_now` / `after_now` exists because the last
+ * point of such a series is the end of the forecast, not the value now: on a solar
+ * forecast that is midnight, so both readouts showed 0 while the curve was fine.
+ * The legend now follows that setting instead of ignoring it, so the two agree.
+ */
+function getLegendFormatter(
+  config: ChartCardConfig,
+  hass: HomeAssistant | undefined,
+  graphs: (GraphEntry | undefined)[] | undefined,
+) {
+  return function (_, opts, conf = config, hass2 = hass, lgraphs = graphs) {
     const name = computeName(
       opts.seriesIndex,
       conf.series_in_graph,
@@ -488,8 +500,15 @@ function getLegendFormatter(config: ChartCardConfig, hass: HomeAssistant | undef
     if (!conf.series_in_graph[opts.seriesIndex].show.legend_value) {
       return [name];
     } else {
+      const inHeader = conf.series_in_graph[opts.seriesIndex]?.show.in_header;
+      const atNow = inHeader === 'before_now' || inHeader === 'after_now';
       let value = TIMESERIES_TYPES.includes(config.chart_type)
-        ? lastRenderedValue(opts.w.globals.series[opts.seriesIndex])
+        ? atNow
+          ? lgraphs?.[conf.series_in_graph[opts.seriesIndex].index]?.nowValue(
+              new Date().getTime(),
+              inHeader === 'before_now',
+            ) ?? null
+          : lastRenderedValue(opts.w.globals.series[opts.seriesIndex])
         : opts.w.globals.series[opts.seriesIndex];
       if (conf.series_in_graph[opts.seriesIndex]?.invert && value) {
         value = -value;
