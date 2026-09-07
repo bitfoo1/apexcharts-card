@@ -458,6 +458,22 @@ function getPlotOptions_radialBar(config: ChartCardConfig, hass: HomeAssistant |
   }
 }
 
+/**
+ * The last value ApexCharts actually holds for a series, skipping a trailing gap.
+ *
+ * `globals.series` carries one entry per point and `null` where a bucket has no
+ * value, so reading the final element shows `N/A` for any series that ends in a
+ * gap — which is every series under `group_by.full_span`, whose buckets beyond now
+ * are empty by design. The legend means "the current value", and a gap is not one.
+ */
+export function lastRenderedValue(values: (number | null)[]): number | null {
+  for (let index = values.length - 1; index >= 0; index--) {
+    const value = values[index];
+    if (value !== null && value !== undefined) return value;
+  }
+  return null;
+}
+
 function getLegendFormatter(config: ChartCardConfig, hass: HomeAssistant | undefined) {
   return function (_, opts, conf = config, hass2 = hass) {
     const name = computeName(
@@ -473,7 +489,7 @@ function getLegendFormatter(config: ChartCardConfig, hass: HomeAssistant | undef
       return [name];
     } else {
       let value = TIMESERIES_TYPES.includes(config.chart_type)
-        ? opts.w.globals.series[opts.seriesIndex].slice(-1)[0]
+        ? lastRenderedValue(opts.w.globals.series[opts.seriesIndex])
         : opts.w.globals.series[opts.seriesIndex];
       if (conf.series_in_graph[opts.seriesIndex]?.invert && value) {
         value = -value;

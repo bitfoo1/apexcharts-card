@@ -11,6 +11,7 @@ import {
   aggregateMinimum,
   aggregateSum,
   filterNulls,
+  lastNonNull,
 } from '../src/graphEntry';
 import { EntityCachePoints } from '../src/types';
 
@@ -218,5 +219,30 @@ describe('AGGREGATE_FUNCS', () => {
       expect(typeof fn, name).toBe('function');
       expect(() => fn(points(1, null, 2)), name).not.toThrow();
     }
+  });
+});
+
+describe('lastNonNull', () => {
+  /*
+   * The header states and the legend read this. Before it existed they took the
+   * literal last point, so a series ending in a gap — every series under
+   * group_by.full_span, whose buckets beyond now are empty by design — showed
+   * "N/A" next to its unit while the chart drew a normal curve.
+   */
+  it('skips a trailing gap', () => {
+    expect(lastNonNull(points(10, 20, null, null))).toBe(20);
+  });
+
+  it('returns the last value when there is no gap', () => {
+    expect(lastNonNull(points(10, 20))).toBe(20);
+  });
+
+  it('keeps a zero, which is a value and not a gap', () => {
+    expect(lastNonNull(points(10, 0))).toBe(0);
+  });
+
+  it('returns null for an empty series and for one that is all gaps', () => {
+    expect(lastNonNull([])).toBeNull();
+    expect(lastNonNull(points(null, null))).toBeNull();
   });
 });

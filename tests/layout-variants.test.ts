@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { foldLayoutYAxis, getLayoutYAxisDefaults } from '../src/apex-layouts';
+import { foldLayoutYAxis, getLayoutYAxisDefaults, lastRenderedValue } from '../src/apex-layouts';
 
 /**
  * `layout: minimal` declares its y-axis as a single object while the card
@@ -59,5 +59,26 @@ describe('foldLayoutYAxis', () => {
     const [axis] = foldLayoutYAxis(defaults as Record<string, unknown>, generated) as Axis[];
     expect(axis.show).toBe(false);
     expect(axis.max).toBe(100);
+  });
+});
+
+describe('lastRenderedValue', () => {
+  /*
+   * The legend reads the last value of the array ApexCharts renders. Taking its
+   * final element showed `N/A` for every series ending in a gap, which under
+   * group_by.full_span is every series: its buckets beyond now are empty by design.
+   * The header states had the same bug through a different path — see lastNonNull.
+   */
+  it('skips a trailing gap', () => {
+    expect(lastRenderedValue([1, 2, 3, null, null])).toBe(3);
+  });
+
+  it('keeps a zero, which is a value and not a gap', () => {
+    expect(lastRenderedValue([5, 0])).toBe(0);
+  });
+
+  it('returns null when nothing was rendered', () => {
+    expect(lastRenderedValue([])).toBeNull();
+    expect(lastRenderedValue([null, null])).toBeNull();
   });
 });

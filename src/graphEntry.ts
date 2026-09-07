@@ -142,7 +142,7 @@ export default class GraphEntry {
   }
 
   get lastState(): number | null {
-    return this.history.length > 0 ? this.history[this.history.length - 1][1] : null;
+    return lastNonNull(this.history);
   }
 
   public nowValue(now: number, before: boolean): number | null {
@@ -548,6 +548,22 @@ export default class GraphEntry {
 /** Drops points whose value is null, which every aggregation but sum ignores. */
 export function filterNulls(items: EntityCachePoints): EntityCachePoints {
   return items.filter((item) => item[1] !== null);
+}
+
+/**
+ * The most recent value a series actually carries, ignoring a trailing gap.
+ *
+ * The header states and the legend show "the current value", and taking the last
+ * element of the series gets that wrong whenever the series ends without one: a
+ * bucket beyond now under `group_by.full_span`, or history that simply stops. Both
+ * rendered as `N/A` beside a unit while the chart plainly showed a curve.
+ */
+export function lastNonNull(items: EntityCachePoints): number | null {
+  for (let index = items.length - 1; index >= 0; index--) {
+    const value = items[index][1];
+    if (value !== null) return value;
+  }
+  return null;
 }
 
 /**
