@@ -1,3 +1,9 @@
+## [2.6.1](https://github.com/bitfoo1/apexcharts-card/compare/v2.6.0...v2.6.1) (2026-09-07)
+
+### Bug Fixes
+
+* **header:** :bug: read the last known value, not the last point, for header and legend ([57901d1](https://github.com/bitfoo1/apexcharts-card/commit/57901d130b2df0c9d664af3ce3b4319d292ee869))
+
 ## [2.6.0](https://github.com/bitfoo1/apexcharts-card/compare/v2.5.0...v2.6.0) (2026-09-07)
 
 ### Features
