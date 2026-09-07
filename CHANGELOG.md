@@ -1,3 +1,9 @@
+## [2.6.3](https://github.com/bitfoo1/apexcharts-card/compare/v2.6.2...v2.6.3) (2026-09-07)
+
+### Bug Fixes
+
+* **legend:** :bug: let in_header raw drive the legend value too ([d2b5122](https://github.com/bitfoo1/apexcharts-card/commit/d2b5122f93dec1bb1677c5a042a2dc16699aafdd))
+
 ## [2.6.2](https://github.com/bitfoo1/apexcharts-card/compare/v2.6.1...v2.6.2) (2026-09-07)
 
 ### Bug Fixes
