@@ -500,17 +500,27 @@ function getLegendFormatter(
     if (!conf.series_in_graph[opts.seriesIndex].show.legend_value) {
       return [name];
     } else {
-      const inHeader = conf.series_in_graph[opts.seriesIndex]?.show.in_header;
+      const serie = conf.series_in_graph[opts.seriesIndex];
+      const inHeader = serie?.show.in_header;
       const atNow = inHeader === 'before_now' || inHeader === 'after_now';
-      let value = TIMESERIES_TYPES.includes(config.chart_type)
-        ? atNow
-          ? lgraphs?.[conf.series_in_graph[opts.seriesIndex].index]?.nowValue(
-              new Date().getTime(),
-              inHeader === 'before_now',
-            ) ?? null
-          : lastRenderedValue(opts.w.globals.series[opts.seriesIndex])
-        : opts.w.globals.series[opts.seriesIndex];
-      if (conf.series_in_graph[opts.seriesIndex]?.invert && value) {
+      let value;
+      let rawReading = false;
+      if (!TIMESERIES_TYPES.includes(config.chart_type)) {
+        value = opts.w.globals.series[opts.seriesIndex];
+      } else if (inHeader === 'raw') {
+        // `raw` means the entity's own latest state, deliberately past the card's
+        // grouping — and past `invert` too, exactly as the header reads it, so the
+        // two cannot disagree. Taken from the graph rather than from the captured
+        // `hass`, which is the one this closure received when the chart was built:
+        // reading that showed a value frozen at chart creation.
+        value = lgraphs?.[serie.index]?.rawState ?? null;
+        rawReading = true;
+      } else if (atNow) {
+        value = lgraphs?.[serie.index]?.nowValue(new Date().getTime(), inHeader === 'before_now') ?? null;
+      } else {
+        value = lastRenderedValue(opts.w.globals.series[opts.seriesIndex]);
+      }
+      if (!rawReading && serie?.invert && value) {
         value = -value;
       }
       if (!conf.series_in_graph[opts.seriesIndex]?.show.as_duration) {

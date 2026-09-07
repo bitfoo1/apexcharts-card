@@ -125,6 +125,23 @@ export default class GraphEntry {
     return this._computedHistory || [];
   }
 
+  /**
+   * The entity's own latest reading, past this card's grouping and transform.
+   *
+   * Read from `_entityState`, which the hass setter refreshes, so a consumer that
+   * caches this object still sees current data — the legend formatter captures its
+   * `hass` once when the chart is built and would otherwise show a value frozen at
+   * that moment, while the header updates on every state change.
+   */
+  get rawState(): number | null {
+    if (!this._entityState) return null;
+    const reading = this._config.attribute
+      ? this._entityState.attributes?.[this._config.attribute]
+      : this._entityState.state;
+    const asNumber = Number(reading);
+    return Number.isNaN(asNumber) ? null : asNumber;
+  }
+
   get index(): number {
     return this._index;
   }
